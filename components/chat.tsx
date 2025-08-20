@@ -297,7 +297,7 @@ const AuthModal: React.FC<{ onClose: () => void; onAuthSuccess: () => void }> = 
 const initialWelcomeMessage: Message = {
   id: 'welcome',
   type: 'assistant',
-  content: 'Hello! Upload a PDF, paste text, or share a URL — then ask me anything about it.',
+  content: 'Hello! Upload a PDF, paste text, or share a URL, then ask me anything about it.',
   timestamp: new Date()
 };
 
@@ -779,7 +779,7 @@ export default function ContextualAIChatUI() {
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                          code({ node, inline, className, children, ...props }) {
+                          code({ node, inline, className, children, ...props }: any) { // <-- THE FIX IS HERE
                             const match = /language-(\w+)/.exec(className || '');
                             return !inline && match ? (
                               <SyntaxHighlighter
@@ -901,7 +901,7 @@ export default function ContextualAIChatUI() {
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
-                        code({ node, inline, className, children, ...props }) {
+                        code({ node, inline, className, children, ...props }: any) { // <-- THE FIX IS HERE
                           const match = /language-(\w+)/.exec(className || '');
                           return !inline && match ? (
                             <SyntaxHighlighter

@@ -102,7 +102,7 @@ const Navbar: React.FC = () => {
                 </button>
                 {isProfileMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 z-50">
-                    <button
+                    {/* <button
                       onClick={() => {
                         handleNavigation('/profile');
                         setIsProfileMenuOpen(false);
@@ -111,7 +111,7 @@ const Navbar: React.FC = () => {
                     >
                       <LayoutDashboard className="w-4 h-4" />
                       Profile
-                    </button>
+                    </button> */}
                     <button
                       onClick={handleLogout}
                       className="flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
@@ -159,7 +159,7 @@ const Navbar: React.FC = () => {
                   </button>
                    {isProfileMenuOpen && (
                       <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 z-50">
-                          <button 
+                          {/* <button 
                             onClick={() => {
                               handleNavigation('/profile');
                               setIsProfileMenuOpen(false);
@@ -168,7 +168,7 @@ const Navbar: React.FC = () => {
                           >
                             <LayoutDashboard className="w-4 h-4" />
                             Profile
-                          </button>
+                          </button> */}
                           <button 
                             onClick={handleLogout} 
                             className="flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
