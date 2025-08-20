@@ -13,24 +13,26 @@ import {
   AlertCircle,
   Menu,
   Eye,
-  Trash2
+  Trash2,
+  LogIn,
+  LogOut
 } from 'lucide-react';
-import { auth, db } from '@/firebase/config';
+import { auth } from '@/firebase/config';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { 
-  collection, 
-  addDoc, 
-  query, 
-  where, 
-  orderBy, 
-  onSnapshot, 
-  doc, 
-  updateDoc,
-  deleteDoc 
-} from 'firebase/firestore';
-import { signInAnonymously } from 'firebase/auth';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  sendPasswordResetEmail
+} from 'firebase/auth';
 
-/*********** TYPES  ***********/
+import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import remarkGfm from 'remark-gfm';
+
+
+/*********** TYPES  ***********/
 interface Message {
   id: string;
   type: 'user' | 'assistant';
@@ -39,7 +41,6 @@ interface Message {
   attachments?: UploadedFile[];
   sources?: DocumentSource[];
   userId?: string;
-  chatId?: string;
 }
 
 interface UploadedFile {
@@ -61,36 +62,10 @@ interface DocumentSource {
   score: number;
 }
 
-interface ChatSession {
-  id: string;
-  userId: string;
-  title: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 /*********** CONSTANTS ***********/
 const MAX_PDF_SIZE = 5 * 1024 * 1024; // 5MB
 const PREVIEW_LENGTH = 200;
-
-/*********** LOCAL STORAGE HELPERS ***********/
-const saveDocumentsToLocal = (docs: UploadedFile[]) => {
-  try {
-    localStorage.setItem('uploaded_documents', JSON.stringify(docs));
-  } catch (error) {
-    console.error('Error saving documents to localStorage:', error);
-  }
-};
-
-const loadDocumentsFromLocal = (): UploadedFile[] => {
-  try {
-    const saved = localStorage.getItem('uploaded_documents');
-    return saved ? JSON.parse(saved) : [];
-  } catch (error) {
-    console.error('Error loading documents from localStorage:', error);
-    return [];
-  }
-};
 
 /*********** API HELPERS ***********/
 const ragAPI = {
@@ -142,11 +117,13 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
     </div>
   </div>
 );
-  const formatBytes = (bytes?: number) => {
-    if (!bytes) return '';
-    const kb = bytes / 1024;
-    return kb > 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb.toFixed(1)} KB`;
-  };
+
+const formatBytes = (bytes?: number) => {
+  if (!bytes) return '';
+  const kb = bytes / 1024;
+  return kb > 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb.toFixed(1)} KB`;
+};
+
 const PreviewModal: React.FC<{ file: UploadedFile; onClose: () => void }> = ({ file, onClose }) => (
   <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
     <div className="w-full max-w-2xl bg-slate-800 border border-white/10 rounded-xl p-6">
@@ -172,35 +149,178 @@ const PreviewModal: React.FC<{ file: UploadedFile; onClose: () => void }> = ({ f
   </div>
 );
 
+/*********** AUTH MODAL ***********/
+const AuthModal: React.FC<{ onClose: () => void; onAuthSuccess: () => void }> = ({ onClose, onAuthSuccess }) => {
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [resetEmailSent, setResetEmailSent] = useState(false);
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      if (isLogin) {
+        await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        await createUserWithEmailAndPassword(auth, email, password);
+      }
+      onAuthSuccess();
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!email) {
+      setError('Please enter your email first');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setResetEmailSent(true);
+    } catch (err: any) {
+      setError(err.message || 'Failed to send reset email');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-slate-800 border border-white/10 rounded-xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-semibold text-white">
+            {isLogin ? 'Sign In' : 'Sign Up'}
+          </h3>
+          <button onClick={onClose}>
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+
+        {resetEmailSent ? (
+          <div className="text-center">
+            <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
+            <h4 className="text-lg font-medium text-white mb-2">Reset Email Sent</h4>
+            <p className="text-gray-300 mb-4">
+              Check your email for password reset instructions.
+            </p>
+            <button
+              onClick={() => setResetEmailSent(false)}
+              className="text-blue-400 hover:text-blue-300"
+            >
+              Back to Sign In
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleAuth} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter your email"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter your password"
+                required
+              />
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 text-red-400 text-sm">
+                <AlertCircle className="w-4 h-4" />
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || !email || !password}
+              className="w-full py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isLogin ? 'Sign In' : 'Sign Up'}
+            </button>
+
+            <div className="flex flex-col gap-2 text-center text-sm">
+              <button
+                type="button"
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-blue-400 hover:text-blue-300"
+              >
+                {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
+              </button>
+
+              {isLogin && (
+                <button
+                  type="button"
+                  onClick={handlePasswordReset}
+                  className="text-gray-400 hover:text-gray-300"
+                >
+                  Forgot Password?
+                </button>
+              )}
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
+
+
+const initialWelcomeMessage: Message = {
+  id: 'welcome',
+  type: 'assistant',
+  content: 'Hello! Upload a PDF, paste text, or share a URL — then ask me anything about it.',
+  timestamp: new Date()
+};
+
 /*********** MAIN COMPONENT ***********/
 export default function ContextualAIChatUI() {
-  /* ---------- Auth & Firebase ---------- */
   const [user, loading] = useAuthState(auth);
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-
-  /* ---------- State ---------- */
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([initialWelcomeMessage]);
   const [inputMessage, setInputMessage] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isTyping, setIsTyping] = useState(false);
-
-  /* Bottom-sheet for mobile */
   const [showSheet, setShowSheet] = useState(false);
-
-  /* URL / Text quick modals */
   const [showUrlModal, setShowUrlModal] = useState(false);
   const [url, setUrl] = useState('');
   const [showTextModal, setShowTextModal] = useState(false);
   const [textContent, setTextContent] = useState('');
   const [showPreview, setShowPreview] = useState<UploadedFile | null>(null);
 
-  /* Refs */
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const desktopTextareaRef = useRef<HTMLTextAreaElement>(null);
   const mobileTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  /* ---------- Effects ---------- */
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -215,93 +335,33 @@ export default function ContextualAIChatUI() {
     });
   }, [inputMessage]);
 
-  // Initialize anonymous auth and load documents
-  useEffect(() => {
-    const initAuth = async () => {
-      if (!user && !loading) {
-        try {
-          await signInAnonymously(auth);
-        } catch (error) {
-          console.error('Auth error:', error);
-        }
-      }
-    };
-    initAuth();
-  }, [user, loading]);
-
-  // Load documents from localStorage on mount
-  useEffect(() => {
-    const savedDocs = loadDocumentsFromLocal();
-    setUploadedFiles(savedDocs);
-  }, []);
-
-  // Save documents to localStorage when they change
-  useEffect(() => {
-    saveDocumentsToLocal(uploadedFiles);
-  }, [uploadedFiles]);
-
-  // Load messages from Firebase when user is available
-  useEffect(() => {
-    if (!user) return;
-
-    // Create or get current chat session
-    const initChat = async () => {
-      if (!currentChatId) {
-        const chatRef = await addDoc(collection(db, 'chats'), {
-          userId: user.uid,
-          title: 'New Chat',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-        setCurrentChatId(chatRef.id);
-      }
-    };
-
-    initChat();
-
-    // Listen to messages if we have a chat ID
-    if (currentChatId) {
-      const messagesQuery = query(
-        collection(db, 'messages'),
-        where('chatId', '==', currentChatId),
-        orderBy('timestamp', 'asc')
-      );
-
-      const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-        const loadedMessages = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          timestamp: doc.data().timestamp?.toDate() || new Date(),
-        })) as Message[];
-        
-        if (loadedMessages.length === 0) {
-          // Set welcome message for new chat
-          setMessages([{
-            id: 'welcome',
-            type: 'assistant',
-            content: 'Hello! Upload a PDF, paste text, or share a URL — then ask me anything about it.',
-            timestamp: new Date()
-          }]);
-        } else {
-          setMessages(loadedMessages);
-        }
-      });
-
-      return () => unsubscribe();
+  const checkAuth = (): boolean => {
+    if (!user) {
+      setShowAuthModal(true);
+      return false;
     }
-  }, [user, currentChatId]);
+    return true;
+  };
 
-  /* ---------- Helpers ---------- */
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      setMessages([initialWelcomeMessage]);
+      setUploadedFiles([]);
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
+
   const isValidUrl = (u: string) => {
     try { new URL(u); return true; } catch { return false; }
   };
 
-
-
   const removeFile = async (id: string) => {
+    if (!checkAuth()) return;
+
     const fileToRemove = uploadedFiles.find(f => f.id === id);
-    
-    // Delete from Qdrant if it has a collection ID
+
     if (fileToRemove?.collectionId) {
       try {
         await ragAPI.deleteCollection(fileToRemove.collectionId);
@@ -309,7 +369,7 @@ export default function ContextualAIChatUI() {
         console.error('Error deleting collection:', error);
       }
     }
-    
+
     setUploadedFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
@@ -324,31 +384,31 @@ export default function ContextualAIChatUI() {
     }
   };
 
-  /* ---------- Upload Handlers ---------- */
   const handleFileUpload = async (files: FileList | null) => {
+    if (!checkAuth()) return;
     if (!files) return;
-    
+
     Array.from(files).forEach(async (file) => {
       if (file.type !== 'application/pdf') {
         alert('Only PDF files are supported');
         return;
       }
-      
+
       if (file.size > MAX_PDF_SIZE) {
         alert(`File size must be less than ${MAX_PDF_SIZE / (1024 * 1024)}MB`);
         return;
       }
 
       const id = crypto.randomUUID();
-      const newFile: UploadedFile = { 
-        id, 
-        name: file.name, 
-        type: 'pdf', 
-        size: file.size, 
+      const newFile: UploadedFile = {
+        id,
+        name: file.name,
+        type: 'pdf',
+        size: file.size,
         status: 'uploading',
         uploadedAt: new Date()
       };
-      
+
       setUploadedFiles((p) => [...p, newFile]);
 
       try {
@@ -357,13 +417,13 @@ export default function ContextualAIChatUI() {
         formData.append('file', file);
 
         const response = await ragAPI.uploadDocument(formData);
-        
+
         if (response.success) {
           setUploadedFiles((p) =>
             p.map((f) =>
-              f.id === id ? { 
-                ...f, 
-                status: 'success', 
+              f.id === id ? {
+                ...f,
+                status: 'success',
                 collectionId: response.collectionId,
                 preview: `PDF processed successfully. ${response.documentCount} chunks created.`
               } : f
@@ -375,9 +435,9 @@ export default function ContextualAIChatUI() {
       } catch (error) {
         setUploadedFiles((p) =>
           p.map((f) =>
-            f.id === id ? { 
-              ...f, 
-              status: 'error', 
+            f.id === id ? {
+              ...f,
+              status: 'error',
               error: error instanceof Error ? error.message : 'Upload failed'
             } : f
           )
@@ -388,19 +448,20 @@ export default function ContextualAIChatUI() {
   };
 
   const handleTextUpload = async () => {
+    if (!checkAuth()) return;
     if (!textContent.trim()) return;
-    
+
     const id = crypto.randomUUID();
     const name = `Text: ${textContent.slice(0, 30)}${textContent.length > 30 ? '…' : ''}`;
-    const newFile: UploadedFile = { 
-      id, 
-      name, 
-      type: 'text', 
+    const newFile: UploadedFile = {
+      id,
+      name,
+      type: 'text',
       status: 'uploading',
       preview: textContent.slice(0, PREVIEW_LENGTH) + (textContent.length > PREVIEW_LENGTH ? '...' : ''),
       uploadedAt: new Date()
     };
-    
+
     setUploadedFiles((p) => [...p, newFile]);
 
     try {
@@ -409,14 +470,14 @@ export default function ContextualAIChatUI() {
       formData.append('text', textContent);
 
       const response = await ragAPI.uploadDocument(formData);
-      
+
       if (response.success) {
         setUploadedFiles((p) =>
           p.map((f) =>
-            f.id === id ? { 
-              ...f, 
-              status: 'success', 
-              collectionId: response.collectionId 
+            f.id === id ? {
+              ...f,
+              status: 'success',
+              collectionId: response.collectionId
             } : f
           )
         );
@@ -426,9 +487,9 @@ export default function ContextualAIChatUI() {
     } catch (error) {
       setUploadedFiles((p) =>
         p.map((f) =>
-          f.id === id ? { 
-            ...f, 
-            status: 'error', 
+          f.id === id ? {
+            ...f,
+            status: 'error',
             error: error instanceof Error ? error.message : 'Upload failed'
           } : f
         )
@@ -441,18 +502,19 @@ export default function ContextualAIChatUI() {
   };
 
   const handleUrlUpload = async () => {
+    if (!checkAuth()) return;
     if (!isValidUrl(url)) return;
-    
+
     const id = crypto.randomUUID();
-    const newFile: UploadedFile = { 
-      id, 
-      name: url, 
-      type: 'url', 
-      status: 'uploading', 
+    const newFile: UploadedFile = {
+      id,
+      name: url,
+      type: 'url',
+      status: 'uploading',
       url,
       uploadedAt: new Date()
     };
-    
+
     setUploadedFiles((p) => [...p, newFile]);
 
     try {
@@ -461,13 +523,13 @@ export default function ContextualAIChatUI() {
       formData.append('url', url);
 
       const response = await ragAPI.uploadDocument(formData);
-      
+
       if (response.success) {
         setUploadedFiles((p) =>
           p.map((f) =>
-            f.id === id ? { 
-              ...f, 
-              status: 'success', 
+            f.id === id ? {
+              ...f,
+              status: 'success',
               collectionId: response.collectionId,
               preview: `Website content processed. ${response.documentCount} chunks created.`
             } : f
@@ -479,9 +541,9 @@ export default function ContextualAIChatUI() {
     } catch (error) {
       setUploadedFiles((p) =>
         p.map((f) =>
-          f.id === id ? { 
-            ...f, 
-            status: 'error', 
+          f.id === id ? {
+            ...f,
+            status: 'error',
             error: error instanceof Error ? error.message : 'Upload failed'
           } : f
         )
@@ -493,45 +555,40 @@ export default function ContextualAIChatUI() {
     setShowSheet(false);
   };
 
-  /* ---------- Chat ---------- */
   const sendMessage = async () => {
-    if (!inputMessage.trim() || !user || !currentChatId) return;
+    if (!checkAuth()) return;
+    if (!inputMessage.trim()) return;
 
     const successfulFiles = uploadedFiles.filter((f) => f.status === 'success');
-    
+
     const userMsg: Message = {
       id: crypto.randomUUID(),
       type: 'user',
       content: inputMessage,
       timestamp: new Date(),
       attachments: successfulFiles.length ? successfulFiles : undefined,
-      userId: user.uid,
-      chatId: currentChatId,
+      userId: user!.uid,
     };
 
-    // Save user message to Firebase
-    await addDoc(collection(db, 'messages'), {
-      ...userMsg,
-      timestamp: new Date(),
-    });
+    setMessages(prev => [...prev, userMsg]);
 
+    const currentInput = inputMessage;
     setInputMessage('');
     setIsTyping(true);
 
-    // If we have documents, use RAG
     if (successfulFiles.length > 0) {
       try {
-        // Use the first successful document's collection ID
         const collectionId = successfulFiles[0].collectionId!;
-        
-        // Prepare conversation history
+
         const conversationHistory = messages.slice(-10).map(msg => ({
           role: msg.type === 'user' ? 'user' : 'assistant',
           content: msg.content
         }));
 
+        conversationHistory.push({ role: 'user', content: currentInput });
+
         const response = await ragAPI.chat({
-          message: inputMessage,
+          message: currentInput,
           collectionId,
           conversationHistory
         });
@@ -543,15 +600,9 @@ export default function ContextualAIChatUI() {
             content: response.response,
             timestamp: new Date(),
             sources: response.sources,
-            userId: user.uid,
-            chatId: currentChatId,
+            userId: 'assistant-id',
           };
-
-          // Save assistant message to Firebase
-          await addDoc(collection(db, 'messages'), {
-            ...assistantMsg,
-            timestamp: new Date(),
-          });
+          setMessages(prev => [...prev, assistantMsg]);
         } else {
           throw new Error(response.error || 'Chat failed');
         }
@@ -561,30 +612,19 @@ export default function ContextualAIChatUI() {
           type: 'assistant',
           content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}`,
           timestamp: new Date(),
-          userId: user.uid,
-          chatId: currentChatId,
+          userId: 'assistant-id',
         };
-
-        await addDoc(collection(db, 'messages'), {
-          ...errorMsg,
-          timestamp: new Date(),
-        });
+        setMessages(prev => [...prev, errorMsg]);
       }
     } else {
-      // No documents uploaded, provide helpful message
       const assistantMsg: Message = {
         id: crypto.randomUUID(),
         type: 'assistant',
         content: 'Please upload a document (PDF, text, or URL) first so I can help answer questions about it.',
         timestamp: new Date(),
-        userId: user.uid,
-        chatId: currentChatId,
+        userId: 'assistant-id',
       };
-
-      await addDoc(collection(db, 'messages'), {
-        ...assistantMsg,
-        timestamp: new Date(),
-      });
+      setMessages(prev => [...prev, assistantMsg]);
     }
 
     setIsTyping(false);
@@ -605,20 +645,40 @@ export default function ContextualAIChatUI() {
     );
   }
 
-  /* ---------- Render ---------- */
   return (
     <div className="h-screen flex bg-slate-900 text-white">
       {/* ===== DESKTOP WRAPPER ===== */}
       <div className="hidden md:flex w-full">
-        {/* Left sidebar (desktop) */}
         <aside className="w-1/3 bg-black/20 backdrop-blur-sm border-r border-white/10 flex flex-col">
-          <div className="px-6 py-4 border-b border-white/10">
+          <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-white">Data Sources</h2>
+            {user ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-400">
+                  {user.email || 'Anonymous'}
+                </span>
+                <button
+                  onClick={handleSignOut}
+                  className="p-1 text-gray-400 hover:text-white"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300"
+              >
+                <LogIn className="w-4 h-4" />
+                Sign In
+              </button>
+            )}
           </div>
 
           <div className="flex-1 p-4 space-y-3 overflow-y-auto">
             <button
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => checkAuth() && fileInputRef.current?.click()}
               className="w-full flex items-center gap-4 p-4 bg-black/20 border border-white/10 rounded-lg hover:bg-white/10 transition-colors text-left"
             >
               <FileText className="w-6 h-6 text-gray-400" />
@@ -629,7 +689,7 @@ export default function ContextualAIChatUI() {
             </button>
 
             <button
-              onClick={() => setShowTextModal(true)}
+              onClick={() => checkAuth() && setShowTextModal(true)}
               className="w-full flex items-center gap-4 p-4 bg-black/20 border border-white/10 rounded-lg hover:bg-white/10 transition-colors text-left"
             >
               <FileText className="w-6 h-6 text-gray-400" />
@@ -637,7 +697,7 @@ export default function ContextualAIChatUI() {
             </button>
 
             <button
-              onClick={() => setShowUrlModal(true)}
+              onClick={() => checkAuth() && setShowUrlModal(true)}
               className="w-full flex items-center gap-4 p-4 bg-black/20 border border-white/10 rounded-lg hover:bg-white/10 transition-colors text-left"
             >
               <Link className="w-6 h-6 text-gray-400" />
@@ -664,16 +724,16 @@ export default function ContextualAIChatUI() {
                       {f.status === 'success' && <CheckCircle className="w-4 h-4 text-green-400" />}
                       {f.status === 'error' && <AlertCircle className="w-4 h-4 text-red-400" />}
                       {f.preview && f.status === 'success' && (
-                        <button 
-                          onClick={() => setShowPreview(f)} 
+                        <button
+                          onClick={() => setShowPreview(f)}
                           className="text-gray-400 hover:text-gray-200"
                           title="Preview"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                       )}
-                      <button 
-                        onClick={() => removeFile(f.id)} 
+                      <button
+                        onClick={() => removeFile(f.id)}
                         className="text-gray-400 hover:text-gray-200"
                         title="Remove"
                       >
@@ -687,7 +747,6 @@ export default function ContextualAIChatUI() {
           </div>
         </aside>
 
-        {/* Right panel (desktop chat) */}
         <main className="flex-1 flex flex-col">
           <div className="px-6 py-4 border-b border-white/10 bg-black/20 backdrop-blur-sm">
             <div className="flex items-center gap-3">
@@ -703,23 +762,45 @@ export default function ContextualAIChatUI() {
             {messages.map((msg) => (
               <div key={msg.id} className={`flex gap-3 ${msg.type === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                 <div
-                  className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                    msg.type === 'user' ? 'bg-blue-500 text-white' : 'bg-white/10 text-gray-300'
-                  }`}
+                  className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${msg.type === 'user' ? 'bg-blue-500 text-white' : 'bg-white/10 text-gray-300'
+                    }`}
                 >
                   {msg.type === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                 </div>
 
                 <div className={`flex-1 max-w-3xl ${msg.type === 'user' ? 'text-right' : 'text-left'}`}>
                   <div
-                    className={`inline-block px-4 py-3 rounded-2xl ${
-                      msg.type === 'user'
-                        ? 'bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 text-white'
-                        : 'bg-black/20 backdrop-blur-sm border border-white/10 text-gray-100'
-                    }`}
+                    className={`inline-block px-4 py-3 rounded-2xl ${msg.type === 'user'
+                      ? 'bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 text-white'
+                      : 'bg-black/20 backdrop-blur-sm border border-white/10 text-gray-100'
+                      }`}
                   >
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
-                    
+                    <div className="prose prose-invert prose-sm max-w-none text-left">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          code({ node, inline, className, children, ...props }) {
+                            const match = /language-(\w+)/.exec(className || '');
+                            return !inline && match ? (
+                              <SyntaxHighlighter
+                                style={vscDarkPlus}
+                                language={match[1]}
+                                PreTag="div"
+                              >
+                                {String(children).replace(/\n$/, '')}
+                              </SyntaxHighlighter>
+                            ) : (
+                              <code className={className} {...props}>
+                                {children}
+                              </code>
+                            );
+                          },
+                        }}
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
+                    </div>
+
                     {msg.attachments && msg.attachments.length > 0 && (
                       <div className="mt-2 pt-2 border-t border-white/10 space-y-1">
                         {msg.attachments.map((f) => (
@@ -790,7 +871,6 @@ export default function ContextualAIChatUI() {
 
       {/* ===== MOBILE MARKUP ===== */}
       <div className="md:hidden h-full w-full flex flex-col">
-        {/* Header */}
         <header className="flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-black/20 backdrop-blur-sm">
           <button onClick={() => setShowSheet((s) => !s)} className="p-1">
             <Menu className="w-5 h-5 text-gray-300" />
@@ -802,7 +882,6 @@ export default function ContextualAIChatUI() {
           </div>
         </header>
 
-        {/* Chat area */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
           {messages.map((msg) => (
             <div key={msg.id} className={`flex gap-2 ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -813,13 +892,36 @@ export default function ContextualAIChatUI() {
               )}
               <div className={`max-w-[75%] ${msg.type === 'user' ? 'text-right' : 'text-left'}`}>
                 <div
-                  className={`inline-block px-3 py-2 rounded-2xl text-sm ${
-                    msg.type === 'user'
-                      ? 'bg-blue-500/20 text-white'
-                      : 'bg-black/20 text-gray-100 border border-white/10'
-                  }`}
+                  className={`inline-block px-3 py-2 rounded-2xl text-sm ${msg.type === 'user'
+                    ? 'bg-blue-500/20 text-white'
+                    : 'bg-black/20 text-gray-100 border border-white/10'
+                    }`}
                 >
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                  <div className="prose prose-invert prose-sm max-w-none text-left">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        code({ node, inline, className, children, ...props }) {
+                          const match = /language-(\w+)/.exec(className || '');
+                          return !inline && match ? (
+                            <SyntaxHighlighter
+                              style={vscDarkPlus}
+                              language={match[1]}
+                              PreTag="div"
+                            >
+                              {String(children).replace(/\n$/, '')}
+                            </SyntaxHighlighter>
+                          ) : (
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
+                          );
+                        },
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                  </div>
                   {msg.attachments && msg.attachments.length > 0 && (
                     <div className="mt-2 pt-2 border-t border-white/10 space-y-1">
                       {msg.attachments.map((f) => (
@@ -867,7 +969,6 @@ export default function ContextualAIChatUI() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input bar */}
         <div className="bg-black/20 border-t border-white/10 px-2 py-2">
           {uploadedFiles.filter((f) => f.status === 'success').length > 0 && (
             <div className="text-xs text-gray-400 mb-1 px-2">
@@ -895,15 +996,13 @@ export default function ContextualAIChatUI() {
           </div>
         </div>
 
-        {/* Bottom-sheet backdrop */}
         <div
           className={`fixed inset-0 bg-black/50 z-20 transition-opacity md:hidden ${showSheet ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           onClick={() => setShowSheet(false)}
         />
         <aside
-          className={`fixed top-0 left-0 h-full w-4/5 max-w-sm bg-slate-900/90 backdrop-blur-md border-r border-white/10 z-30 transition-transform md:hidden ${
-            showSheet ? 'translate-x-0' : '-translate-x-full'
-          }`}
+          className={`fixed top-0 left-0 h-full w-4/5 max-w-sm bg-slate-900/90 backdrop-blur-md border-r border-white/10 z-30 transition-transform md:hidden ${showSheet ? 'translate-x-0' : '-translate-x-full'
+            }`}
         >
           <div className="flex items-center justify-between p-4 border-b border-white/10">
             <h2 className="text-lg font-semibold text-white">Sources</h2>
@@ -939,7 +1038,7 @@ export default function ContextualAIChatUI() {
                 <span className="text-gray-200">Add website</span>
               </button>
             </div>
-            
+
             <div className="flex-1 mt-4 space-y-2 overflow-y-auto">
               {uploadedFiles.map((f) => (
                 <div key={f.id} className="flex items-center gap-2 p-2 bg-black/30 rounded-lg">
@@ -953,7 +1052,7 @@ export default function ContextualAIChatUI() {
                     {f.status === 'success' && <CheckCircle className="w-4 h-4 text-green-400" />}
                     {f.status === 'error' && <AlertCircle className="w-4 h-4 text-red-400" />}
                     {f.preview && f.status === 'success' && (
-                      <button 
+                      <button
                         onClick={() => setShowPreview(f)}
                         className="text-gray-400 hover:text-white"
                       >
@@ -970,8 +1069,7 @@ export default function ContextualAIChatUI() {
           </div>
         </aside>
       </div>
-      
-      {/* FIX: Moved Modals and hidden inputs to the top level */}
+
       {showTextModal && (
         <Modal title="Paste text" onClose={() => setShowTextModal(false)}>
           <textarea
@@ -1024,6 +1122,13 @@ export default function ContextualAIChatUI() {
 
       {showPreview && (
         <PreviewModal file={showPreview} onClose={() => setShowPreview(null)} />
+      )}
+
+      {showAuthModal && (
+          <AuthModal
+              onClose={() => setShowAuthModal(false)}
+              onAuthSuccess={() => console.log("Auth successful!")}
+          />
       )}
 
       <input

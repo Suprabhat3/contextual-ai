@@ -5,7 +5,8 @@ import {
   Github,
   Twitter,
   Mail,
-  ExternalLink
+  ExternalLink,
+  Linkedin
 } from 'lucide-react';
 
 interface FooterLink {
@@ -68,18 +69,18 @@ const Footer: React.FC = () => {
   const socialLinks: SocialLink[] = [
     {
       name: "GitHub",
-      href: "https://github.com",
+      href: "https://github.com/Suprabhat3/contextual-ai",
       icon: Github
     },
     {
       name: "Twitter",
-      href: "https://twitter.com",
+      href: "https://x.com/Suprabhat_3",
       icon: Twitter
     },
     {
-      name: "Email",
-      href: "mailto:hello@contextualai.com",
-      icon: Mail
+      name: "Linkedin",
+      href: "https://www.linkedin.com/in/suprabhatt/",
+      icon: Linkedin
     }
   ];
 
@@ -158,7 +159,7 @@ const Footer: React.FC = () => {
                 © {currentYear} Contextual AI. All rights reserved.
               </div>
               <div className="flex items-center gap-6 text-sm text-gray-400">
-                <span>Made with ❤️ for the community</span>
+                <span>Made with ❤️ for the community by Suprabhat</span>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                   <span>All systems operational</span>
