@@ -10,7 +10,9 @@ const Navbar: React.FC = () => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
-  const profileMenuRef = useRef<HTMLDivElement>(null);
+  // 1. Create two separate refs
+  const desktopProfileMenuRef = useRef<HTMLDivElement>(null);
+  const mobileProfileMenuRef = useRef<HTMLDivElement>(null);
 
   // Listen for authentication state changes
   useEffect(() => {
@@ -21,11 +23,26 @@ const Navbar: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Handle clicks outside the profile dropdown to close it
+  // 2. Update useEffect to handle clicks outside both menus
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
-        setIsProfileMenuOpen(false);
+      // Check if the click is outside the desktop menu
+      const isOutsideDesktop = desktopProfileMenuRef.current && !desktopProfileMenuRef.current.contains(event.target as Node);
+      // Check if the click is outside the mobile menu
+      const isOutsideMobile = mobileProfileMenuRef.current && !mobileProfileMenuRef.current.contains(event.target as Node);
+
+      // If the desktop menu exists and the click is outside...
+      if (isOutsideDesktop) {
+          // ...and if the mobile menu also exists and the click is outside (or if it doesn't exist), close the menu.
+          if (isOutsideMobile || !mobileProfileMenuRef.current) {
+               setIsProfileMenuOpen(false);
+          }
+      // Or, if the mobile menu exists and the click is outside...
+      } else if (isOutsideMobile) {
+          // ...and if the desktop menu also exists and the click is outside (or if it doesn't exist), close the menu.
+          if (isOutsideDesktop || !desktopProfileMenuRef.current) {
+              setIsProfileMenuOpen(false);
+          }
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -39,15 +56,15 @@ const Navbar: React.FC = () => {
     setIsMobileMenuOpen(false);
   };
 
-const handleLogout = async () => {
-  try {
-    await signOut(auth);
-    setIsProfileMenuOpen(false);
-    window.location.href = '/';   // <-- put this back
-  } catch (error) {
-    console.error('Error signing out: ', error);
-  }
-};
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setIsProfileMenuOpen(false);
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Error signing out: ', error);
+    }
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 text-white shadow-md backdrop-blur-lg bg-slate-900/80 border-b border-slate-800">
@@ -69,7 +86,8 @@ const handleLogout = async () => {
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-2">
             {currentUser ? (
-              <div className="relative" ref={profileMenuRef}>
+              // 3. Assign the desktop ref here
+              <div className="relative" ref={desktopProfileMenuRef}>
                 <button 
                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                   className="focus:outline-none"
@@ -125,40 +143,41 @@ const handleLogout = async () => {
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center">
              {currentUser ? (
-                 <div className="relative" ref={profileMenuRef}>
-                    <button 
-                      onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                      className="focus:outline-none"
-                    >
-                        {currentUser.photoURL ? (
-                            <img src={currentUser.photoURL} alt="User Profile" className="w-9 h-9 rounded-full border-2 border-slate-600" />
-                        ) : (
-                            <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center border-2 border-slate-600">
-                                <UserIcon className="w-5 h-5 text-slate-400" />
-                            </div>
-                        )}
-                    </button>
-                     {isProfileMenuOpen && (
-                        <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 z-50">
-                            <button 
-                              onClick={() => {
-                                handleNavigation('/profile');
-                                setIsProfileMenuOpen(false);
-                              }} 
-                              className="flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
-                            >
-                              <LayoutDashboard className="w-4 h-4" />
-                              Profile
-                            </button>
-                            <button 
-                              onClick={handleLogout} 
-                              className="flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
-                            >
-                              <LogOut className="w-4 h-4" />
-                              Logout
-                            </button>
-                        </div>
-                    )}
+                // 4. Assign the mobile ref here
+               <div className="relative" ref={mobileProfileMenuRef}>
+                  <button 
+                    onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                    className="focus:outline-none"
+                  >
+                      {currentUser.photoURL ? (
+                          <img src={currentUser.photoURL} alt="User Profile" className="w-9 h-9 rounded-full border-2 border-slate-600" />
+                      ) : (
+                          <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center border-2 border-slate-600">
+                              <UserIcon className="w-5 h-5 text-slate-400" />
+                          </div>
+                      )}
+                  </button>
+                   {isProfileMenuOpen && (
+                      <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 z-50">
+                          <button 
+                            onClick={() => {
+                              handleNavigation('/profile');
+                              setIsProfileMenuOpen(false);
+                            }} 
+                            className="flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                          >
+                            <LayoutDashboard className="w-4 h-4" />
+                            Profile
+                          </button>
+                          <button 
+                            onClick={handleLogout} 
+                            className="flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            Logout
+                          </button>
+                      </div>
+                  )}
                 </div>
             ) : (
                 <button
