@@ -79,7 +79,7 @@ const Navbar: React.FC = () => {
               <img src="/logo.png" alt="Logo" className='rounded-md' />
             </div>
             <span className="font-bold text-xl text-slate-100">
-              ContextualAI
+              Contextual AI
             </span>
           </div>
 

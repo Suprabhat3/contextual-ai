@@ -31,10 +31,10 @@ const Footer: React.FC = () => {
     {
       title: "Product",
       links: [
-        { title: "How it Works", href: "#how-it-works" },
+        { title: "How it Works", href: "#how" },
         { title: "Features", href: "#features" },
         { title: "Pricing", href: "#pricing" },
-        { title: "API Documentation", href: "/docs", external: true }
+        // { title: "API Documentation", href: "/docs", external: true }
       ]
     },
     {

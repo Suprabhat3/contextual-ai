@@ -75,24 +75,6 @@ const SupportMyWork: React.FC = () => {
               ))}
             </div>
           </div>
-
-          {/* Connect with Me */}
-          <div className="text-center pt-12 border-t border-slate-800">
-             <h3 className="text-xl font-bold text-white mb-4">Connect & Stay Updated</h3>
-             <p className="text-slate-400 mb-6">Follow the development journey or get in touch.</p>
-             <div className="flex justify-center items-center gap-6">
-                <a href="#" className="text-slate-400 hover:text-white transition-colors" aria-label="GitHub">
-                    <Github className="w-6 h-6" />
-                </a>
-                <a href="#" className="text-slate-400 hover:text-white transition-colors" aria-label="Twitter">
-                    <Twitter className="w-6 h-6" />
-                </a>
-                <a href="#" className="text-slate-400 hover:text-white transition-colors" aria-label="Email">
-                    <Mail className="w-6 h-6" />
-                </a>
-             </div>
-          </div>
-
         </div>
       </div>
     </section>

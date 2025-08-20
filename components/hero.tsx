@@ -148,7 +148,7 @@ const ContextualAIHero: React.FC = () => {
 
             {/* Description */}
             <p className="text-base text-gray-300 mb-12 max-w-2xl mx-auto">
-              Upload any PDF document and get precise, contextual answers. Our advanced
+              Upload any PDF or other document and get precise, contextual answers. Our advanced <br />
               <span className="text-blue-400 font-semibold"> RAG technology</span> understands your documents, so you don't have to.
             </p>
 

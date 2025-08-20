@@ -40,7 +40,7 @@ const HowItWorks: React.FC = () => {
       description: "Simply drag and drop or select your PDF document. All standard formats are supported.",
       icon: Upload,
       details: [
-        "Supports files up to 100MB",
+        "Supports files up to 5MB",
         "Works with text-based & scanned PDFs (OCR)",
         "Secure encrypted upload",
         "Instant processing starts on upload"
@@ -97,7 +97,7 @@ const HowItWorks: React.FC = () => {
     },
     {
       icon: Users,
-      title: "Collaborate & Share",
+      title: "Collaborate & Share(coming soon)",
       description: "Easily share documents and findings with team members for collaborative analysis."
     }
   ];

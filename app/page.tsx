@@ -1,18 +1,19 @@
-// app/page.tsx
 import Navbar from '@/components/Navbar';
 import ContextualAIHero from '@/components/hero';
 import HowItWorks from '@/components/how-it-work';
 import SupportMyWork from '@/components/support';
+import OurProducts from '@/components/other';
 import Footer from '@/components/footer';
 
 export default function HomePage() {
   return (
     <>
-      <Navbar />          {/* ← shows only on the home page */}
-      <main className="pt-16 isolate"> {/* padding to clear the fixed navbar */}
+      <Navbar />      
+      <main className="pt-16 isolate">
         <ContextualAIHero />
-        <HowItWorks />
+        <div id="how"><HowItWorks /></div>
         <SupportMyWork />
+        <OurProducts />
         <Footer />
       </main>
     </>
