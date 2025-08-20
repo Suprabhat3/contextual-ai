@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation'; // Import useRouter
 import {
   Send,
   FileText,
@@ -19,12 +20,7 @@ import {
 } from 'lucide-react';
 import { auth } from '@/firebase/config';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  sendPasswordResetEmail
-} from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -32,7 +28,7 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
 
 
-/*********** TYPES  ***********/
+/*********** TYPES ***********/
 interface Message {
   id: string;
   type: 'user' | 'assistant';
@@ -149,151 +145,6 @@ const PreviewModal: React.FC<{ file: UploadedFile; onClose: () => void }> = ({ f
   </div>
 );
 
-/*********** AUTH MODAL ***********/
-const AuthModal: React.FC<{ onClose: () => void; onAuthSuccess: () => void }> = ({ onClose, onAuthSuccess }) => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [resetEmailSent, setResetEmailSent] = useState(false);
-
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) return;
-
-    setLoading(true);
-    setError('');
-
-    try {
-      if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
-      } else {
-        await createUserWithEmailAndPassword(auth, email, password);
-      }
-      onAuthSuccess();
-      onClose();
-    } catch (err: any) {
-      setError(err.message || 'Authentication failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePasswordReset = async () => {
-    if (!email) {
-      setError('Please enter your email first');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      await sendPasswordResetEmail(auth, email);
-      setResetEmailSent(true);
-    } catch (err: any) {
-      setError(err.message || 'Failed to send reset email');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-slate-800 border border-white/10 rounded-xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-semibold text-white">
-            {isLogin ? 'Sign In' : 'Sign Up'}
-          </h3>
-          <button onClick={onClose}>
-            <X className="w-5 h-5 text-gray-400" />
-          </button>
-        </div>
-
-        {resetEmailSent ? (
-          <div className="text-center">
-            <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
-            <h4 className="text-lg font-medium text-white mb-2">Reset Email Sent</h4>
-            <p className="text-gray-300 mb-4">
-              Check your email for password reset instructions.
-            </p>
-            <button
-              onClick={() => setResetEmailSent(false)}
-              className="text-blue-400 hover:text-blue-300"
-            >
-              Back to Sign In
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleAuth} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter your email"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter your password"
-                required
-              />
-            </div>
-
-            {error && (
-              <div className="flex items-center gap-2 text-red-400 text-sm">
-                <AlertCircle className="w-4 h-4" />
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading || !email || !password}
-              className="w-full py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isLogin ? 'Sign In' : 'Sign Up'}
-            </button>
-
-            <div className="flex flex-col gap-2 text-center text-sm">
-              <button
-                type="button"
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-blue-400 hover:text-blue-300"
-              >
-                {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
-              </button>
-
-              {isLogin && (
-                <button
-                  type="button"
-                  onClick={handlePasswordReset}
-                  className="text-gray-400 hover:text-gray-300"
-                >
-                  Forgot Password?
-                </button>
-              )}
-            </div>
-          </form>
-        )}
-      </div>
-    </div>
-  );
-};
-
-
 const initialWelcomeMessage: Message = {
   id: 'welcome',
   type: 'assistant',
@@ -304,7 +155,7 @@ const initialWelcomeMessage: Message = {
 /*********** MAIN COMPONENT ***********/
 export default function ContextualAIChatUI() {
   const [user, loading] = useAuthState(auth);
-  const [showAuthModal, setShowAuthModal] = useState(false);
+  const router = useRouter(); // Initialize the router
   const [messages, setMessages] = useState<Message[]>([initialWelcomeMessage]);
   const [inputMessage, setInputMessage] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
@@ -337,7 +188,7 @@ export default function ContextualAIChatUI() {
 
   const checkAuth = (): boolean => {
     if (!user) {
-      setShowAuthModal(true);
+      router.push('/signup'); // Redirect to sign-in page
       return false;
     }
     return true;
@@ -667,7 +518,7 @@ export default function ContextualAIChatUI() {
               </div>
             ) : (
               <button
-                onClick={() => setShowAuthModal(true)}
+                onClick={() => router.push('/signup')}
                 className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300"
               >
                 <LogIn className="w-4 h-4" />
@@ -771,15 +622,15 @@ export default function ContextualAIChatUI() {
                 <div className={`flex-1 max-w-3xl ${msg.type === 'user' ? 'text-right' : 'text-left'}`}>
                   <div
                     className={`inline-block px-4 py-3 rounded-2xl ${msg.type === 'user'
-                      ? 'bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 text-white'
-                      : 'bg-black/20 backdrop-blur-sm border border-white/10 text-gray-100'
+                        ? 'bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 text-white'
+                        : 'bg-black/20 backdrop-blur-sm border border-white/10 text-gray-100'
                       }`}
                   >
                     <div className="prose prose-invert prose-sm max-w-none text-left">
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                          code({ node, inline, className, children, ...props }: any) { // <-- THE FIX IS HERE
+                          code({ node, inline, className, children, ...props }: any) {
                             const match = /language-(\w+)/.exec(className || '');
                             return !inline && match ? (
                               <SyntaxHighlighter
@@ -893,15 +744,15 @@ export default function ContextualAIChatUI() {
               <div className={`max-w-[75%] ${msg.type === 'user' ? 'text-right' : 'text-left'}`}>
                 <div
                   className={`inline-block px-3 py-2 rounded-2xl text-sm ${msg.type === 'user'
-                    ? 'bg-blue-500/20 text-white'
-                    : 'bg-black/20 text-gray-100 border border-white/10'
+                      ? 'bg-blue-500/20 text-white'
+                      : 'bg-black/20 text-gray-100 border border-white/10'
                     }`}
                 >
                   <div className="prose prose-invert prose-sm max-w-none text-left">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
-                        code({ node, inline, className, children, ...props }: any) { // <-- THE FIX IS HERE
+                        code({ node, inline, className, children, ...props }: any) {
                           const match = /language-(\w+)/.exec(className || '');
                           return !inline && match ? (
                             <SyntaxHighlighter
@@ -1014,7 +865,7 @@ export default function ContextualAIChatUI() {
           <div className="flex flex-col h-[calc(100%-60px)] p-4">
             <div className="space-y-3">
               <button
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => checkAuth() && fileInputRef.current?.click()}
                 className="w-full flex items-center gap-3 p-3 bg-black/20 border border-white/10 rounded-lg text-left"
               >
                 <FileText className="w-5 h-5 text-gray-300" />
@@ -1024,14 +875,14 @@ export default function ContextualAIChatUI() {
                 </div>
               </button>
               <button
-                onClick={() => setShowTextModal(true)}
+                onClick={() => checkAuth() && setShowTextModal(true)}
                 className="w-full flex items-center gap-3 p-3 bg-black/20 border border-white/10 rounded-lg text-left"
               >
                 <FileText className="w-5 h-5 text-gray-300" />
                 <span className="text-gray-200">Paste text</span>
               </button>
               <button
-                onClick={() => setShowUrlModal(true)}
+                onClick={() => checkAuth() && setShowUrlModal(true)}
                 className="w-full flex items-center gap-3 p-3 bg-black/20 border border-white/10 rounded-lg text-left"
               >
                 <Link className="w-5 h-5 text-gray-300" />
@@ -1122,13 +973,6 @@ export default function ContextualAIChatUI() {
 
       {showPreview && (
         <PreviewModal file={showPreview} onClose={() => setShowPreview(null)} />
-      )}
-
-      {showAuthModal && (
-          <AuthModal
-              onClose={() => setShowAuthModal(false)}
-              onAuthSuccess={() => console.log("Auth successful!")}
-          />
       )}
 
       <input
