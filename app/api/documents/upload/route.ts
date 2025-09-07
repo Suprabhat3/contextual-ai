@@ -5,6 +5,11 @@ import { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
 import { CheerioWebBaseLoader } from '@langchain/community/document_loaders/web/cheerio';
+import { YoutubeLoader } from '@langchain/community/document_loaders/web/youtube';
+import { DocxLoader } from '@langchain/community/document_loaders/fs/docx';
+import { TextLoader } from 'langchain/document_loaders/fs/text';
+import { CSVLoader } from '@langchain/community/document_loaders/fs/csv';
+import { JSONLoader } from 'langchain/document_loaders/fs/json';
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { v4 as uuidv4 } from 'uuid';
 import { writeFile, unlink } from 'fs/promises';
@@ -21,9 +26,12 @@ interface UploadResponse {
 
 interface DocumentMetadata {
   source: string;
-  type: 'pdf' | 'text' | 'url';
+  type: 'pdf' | 'text' | 'url' | 'youtube' | 'docx' | 'csv' | 'json' | 'txt';
   timestamp: number;
   collectionId: string;
+  title?: string;
+  author?: string;
+  duration?: string;
 }
 
 // Initialize clients
@@ -44,6 +52,15 @@ const textSplitter = new RecursiveCharacterTextSplitter({
   separators: ['\n\n', '\n', ' ', ''],
 });
 
+// Supported file types (excluding PDF since it has its own handler)
+const SUPPORTED_FILE_TYPES = {
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/msword': 'docx',
+  'text/plain': 'txt',
+  'text/csv': 'csv',
+  'application/json': 'json',
+};
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -62,9 +79,24 @@ export async function POST(request: NextRequest) {
       case 'url':
         documents = await handleURLUpload(formData, collectionId);
         break;
+      case 'youtube':
+        documents = await handleYouTubeUpload(formData, collectionId);
+        break;
+      case 'file':
+        // Check if it's a PDF file and redirect to PDF handler
+        const file = formData.get('file') as File;
+        if (file && file.type === 'application/pdf') {
+          documents = await handlePDFUpload(formData, collectionId);
+        } else {
+          documents = await handleFileUpload(formData, collectionId);
+        }
+        break;
       default:
         return NextResponse.json(
-          { success: false, message: 'Invalid document type' },
+          { 
+            success: false, 
+            message: 'Invalid document type. Supported types: pdf, text, url, youtube, file' 
+          },
           { status: 400 }
         );
     }
@@ -185,6 +217,116 @@ async function handleURLUpload(formData: FormData, collectionId: string) {
   });
 
   return documents;
+}
+
+async function handleYouTubeUpload(formData: FormData, collectionId: string) {
+  const url = formData.get('url') as string;
+  if (!url) throw new Error('No YouTube URL provided');
+
+  // Validate YouTube URL
+  const youtubeUrlPattern = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)/;
+  if (!youtubeUrlPattern.test(url)) {
+    throw new Error('Invalid YouTube URL format');
+  }
+
+  try {
+    // YoutubeLoader can extract transcript
+    const loader = YoutubeLoader.createFromUrl(url, {
+      language: 'en',
+      addVideoInfo: true,
+    });
+    
+    const documents = await loader.load();
+    
+    // Add metadata
+    documents.forEach(doc => {
+      doc.metadata = {
+        ...doc.metadata,
+        source: url,
+        type: 'youtube',
+        timestamp: Date.now(),
+        collectionId,
+        title: doc.metadata.title || 'YouTube Video',
+        author: doc.metadata.author || 'Unknown',
+        duration: doc.metadata.duration || 'Unknown',
+      } as DocumentMetadata;
+    });
+
+    return documents;
+  } catch (error) {
+    throw new Error(`Failed to load YouTube video: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+async function handleFileUpload(formData: FormData, collectionId: string) {
+  const file = formData.get('file') as File;
+  if (!file) throw new Error('No file provided');
+
+  const fileType = SUPPORTED_FILE_TYPES[file.type as keyof typeof SUPPORTED_FILE_TYPES];
+  if (!fileType) {
+    throw new Error(`Unsupported file type: ${file.type}. Supported types: ${Object.keys(SUPPORTED_FILE_TYPES).join(', ')}, application/pdf`);
+  }
+
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+  
+  // Create temporary file with appropriate extension
+  const fileExtension = getFileExtension(file.name) || fileType;
+  const tempPath = join(tmpdir(), `${collectionId}.${fileExtension}`);
+  await writeFile(tempPath, buffer);
+
+  try {
+    let documents: any[] = [];
+    
+    switch (fileType) {
+      case 'docx':
+        const docxLoader = new DocxLoader(tempPath);
+        documents = await docxLoader.load();
+        break;
+        
+      case 'txt':
+        const txtLoader = new TextLoader(tempPath);
+        documents = await txtLoader.load();
+        break;
+        
+      case 'csv':
+        const csvLoader = new CSVLoader(tempPath);
+        documents = await csvLoader.load();
+        break;
+        
+      case 'json':
+        const jsonLoader = new JSONLoader(tempPath);
+        documents = await jsonLoader.load();
+        break;
+        
+      default:
+        throw new Error(`Handler not implemented for file type: ${fileType}`);
+    }
+    
+    // Add metadata
+    documents.forEach(doc => {
+      doc.metadata = {
+        ...doc.metadata,
+        source: file.name,
+        type: fileType,
+        timestamp: Date.now(),
+        collectionId,
+      } as DocumentMetadata;
+    });
+
+    return documents;
+  } finally {
+    // Clean up temp file
+    await unlink(tempPath).catch(() => {});
+  }
+}
+
+function getFileExtension(filename: string): string | null {
+  const lastDotIndex = filename.lastIndexOf('.');
+  if (lastDotIndex === -1 || lastDotIndex === filename.length - 1) {
+    return null;
+  }
+  return filename.substring(lastDotIndex + 1).toLowerCase();
 }
 
 async function createQdrantCollection(collectionName: string) {

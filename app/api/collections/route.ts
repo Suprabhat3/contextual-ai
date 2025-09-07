@@ -2,9 +2,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { QdrantClient } from '@qdrant/js-client-rest';
 
+// Use the cloud version of Qdrant by connecting via the full URL
 const qdrantClient = new QdrantClient({
-  host: process.env.QDRANT_HOST || 'localhost',
-  port: Number(process.env.QDRANT_PORT) || 6333,
+  url: process.env.QDRANT_URL,
   apiKey: process.env.QDRANT_API_KEY,
 });
 
