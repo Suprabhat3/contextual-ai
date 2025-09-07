@@ -67,7 +67,7 @@ const Navbar: React.FC = () => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 text-white shadow-md backdrop-blur-lg bg-slate-900/80 border-b border-slate-800">
+    <nav className="fixed top-0 left-0 right-0 z-50 text-white shadow-md backdrop-blur-lg bg-slate-900/80 border-b border-slate-800 py-1">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -93,9 +93,9 @@ const Navbar: React.FC = () => {
                   className="focus:outline-none"
                 >
                   {currentUser.photoURL ? (
-                    <img src={currentUser.photoURL} alt="User Profile" className="w-9 h-9 rounded-full border-2 border-slate-600 hover:border-blue-400 transition" />
+                    <img src={currentUser.photoURL} alt="User Profile" className="w-10 h-10 rounded-full border-2 border-slate-600 hover:border-blue-400 transition mt-6" />
                   ) : (
-                    <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center border-2 border-slate-600 hover:border-blue-400 transition">
+                    <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center border-2 border-slate-600 hover:border-blue-400 transition mt-8">
                       <UserIcon className="w-5 h-5 text-slate-400" />
                     </div>
                   )}

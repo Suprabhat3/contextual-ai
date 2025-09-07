@@ -90,7 +90,7 @@ const ContextualAIHero: React.FC = () => {
       rotation: "transform rotate-2 hover:rotate-0"
     },
     {
-      filename: "Manual.pdf",
+      filename: "Manual.csv",
       question: "How do I configure this?",
       answer: "To configure the system, navigate to Settings and...",
       iconColor: "text-blue-400",
@@ -143,7 +143,7 @@ const ContextualAIHero: React.FC = () => {
 
             {/* Subheading */}
             <p className="text-lg md:text-xl text-gray-400 mb-4 max-w-3xl mx-auto leading-relaxed">
-              Transform your PDFs into intelligent conversations.
+              Transform your Data into intelligent conversations.
             </p>
 
             {/* Description */}
@@ -188,7 +188,7 @@ const ContextualAIHero: React.FC = () => {
                 className="group px-8 py-4 bg-blue-600 text-white font-bold text-base rounded-lg hover:bg-blue-500 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-blue-500/20 flex items-center gap-3"
               >
                 <Upload className="w-5 h-5 transition-transform group-hover:-translate-y-0.5" />
-                Start Chatting with PDFs
+                Start Chatting with your Docx
               </button>
             </div>
 

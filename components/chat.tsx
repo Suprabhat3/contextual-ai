@@ -361,7 +361,7 @@ export default function ContextualAIChatUI() {
       const newFile: UploadedFile = {
         id,
         name: file.name,
-        type: fileType,
+        type: fileType as UploadedFile['type'],
         size: file.size,
         status: 'uploading',
         uploadedAt: new Date()
@@ -777,11 +777,11 @@ export default function ContextualAIChatUI() {
                     rows={1}
                     style={{ minHeight: 48, maxHeight: 120 }}
                   />
-                  {inputMessage && (
-                    <div className="text-xs text-gray-500 text-right mt-1 pr-2">
+                  {/* {inputMessage && (
+                    <div className="text-xs text-gray-500 text-right pr-2 mt-2 mb-0">
                       {inputMessage.length}/1000
                     </div>
-                  )}
+                  )} */}
                 </div>
                 <button
                   onClick={sendMessage}
@@ -992,7 +992,7 @@ export default function ContextualAIChatUI() {
             >
               <Paperclip className="w-4 h-4 text-gray-300" />
             </button>
-            <div className="flex-1 relative">
+            <div className="flex-1 relative mb-0">
               <textarea
                 ref={mobileTextareaRef}
                 value={inputMessage}

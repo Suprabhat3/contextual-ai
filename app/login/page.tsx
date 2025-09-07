@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Mail, Lock, CheckCircle, X } from 'lucide-react';
-import { auth } from '@/firebase/config'; // **FIX: Using the specified import path**
+import { auth } from '@/firebase/config'; 
 import { 
   signInWithEmailAndPassword, 
   GoogleAuthProvider, 
