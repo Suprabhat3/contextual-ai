@@ -3,7 +3,6 @@
 import React from 'react';
 import { CheckCircle } from 'lucide-react';
 
-
 interface ProductCardProps {
   imageSrc: string;
   name: string;
@@ -19,8 +18,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ imageSrc, name, features, url
       rel="noopener noreferrer" 
       className="block group"
     >
-      <div className="h-full bg-slate-800/50 border border-slate-800 rounded-2xl overflow-hidden transition-all duration-300 group-hover:border-slate-700 group-hover:bg-slate-800 group-hover:-translate-y-1">
-        <div className="aspect-video bg-slate-700/50 overflow-hidden">
+      <div className="h-full bg-white border border-slate-200 rounded-2xl overflow-hidden transition-all duration-300 group-hover:border-slate-300 group-hover:shadow-lg group-hover:-translate-y-1">
+        <div className="aspect-video bg-slate-100 overflow-hidden">
           <img 
             src={imageSrc} 
             alt={`${name} product preview`} 
@@ -28,11 +27,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ imageSrc, name, features, url
           />
         </div>
         <div className="p-6">
-          <h3 className="text-xl font-bold text-white mb-4">{name}</h3>
+          <h3 className="text-xl font-bold text-slate-900 mb-4">{name}</h3>
           <ul className="space-y-3">
             {features.map((feature, idx) => (
-              <li key={idx} className="flex items-center gap-3 text-sm text-slate-300">
-                <CheckCircle className="w-4 h-4 text-blue-400 flex-shrink-0" />
+              <li key={idx} className="flex items-center gap-3 text-sm text-slate-600">
+                <CheckCircle className="w-4 h-4 text-blue-600 flex-shrink-0" />
                 <span>{feature}</span>
               </li>
             ))}
@@ -60,29 +59,40 @@ const ProductsSection: React.FC = () => {
       imageSrc: "/hirementies.png",
       name: "HireMentis",
       features: [
-        "Ace Your Next Interview with AI-Powered Practice",
+        "Ace Your Next Interview with AI",
         "Realistic AI Interviews",
         "Instant AI Feedback"
       ],
       url: "https://www.hirementis.site/"
     },
+    // You can add a third product here to utilize the third column on large screens
+    // {
+    //   imageSrc: "/path-to-your-image.png",
+    //   name: "Another Product",
+    //   features: [
+    //     "Feature A",
+    //     "Feature B",
+    //     "Feature C"
+    //   ],
+    //   url: "https://example.com"
+    // },
   ];
 
   return (
-    <section className="py-20 bg-slate-900 text-white">
+    <section className="py-20 bg-slate-50 text-slate-800">
       <div className="container mx-auto px-6">
         {/* Section Header */}
         <div className="text-center mb-16 max-w-3xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Our Other AI Products for <br /><span className="text-blue-400">Every Need</span>
+          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-slate-900">
+            Our Other AI Products for <br /><span className="text-blue-600">Every Need</span>
           </h2>
-          <p className="text-lg text-slate-400">
-            Powerful, intuitive tools designed to help you extract maximum value from your documents with ease and precision.
+          <p className="text-lg text-slate-600">
+            Explore our suite of powerful, intuitive tools designed to bring the power of AI to your fingertips.
           </p>
         </div>
 
         {/* Products Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {products.map((product, index) => (
             <ProductCard 
               key={index}

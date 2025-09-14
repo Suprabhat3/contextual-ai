@@ -52,8 +52,9 @@ const textSplitter = new RecursiveCharacterTextSplitter({
   separators: ['\n\n', '\n', ' ', ''],
 });
 
-// Supported file types (excluding PDF since it has its own handler)
+// Supported file types
 const SUPPORTED_FILE_TYPES = {
+  'application/pdf': 'pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
   'application/msword': 'docx',
   'text/plain': 'txt',
@@ -83,13 +84,7 @@ export async function POST(request: NextRequest) {
         documents = await handleYouTubeUpload(formData, collectionId);
         break;
       case 'file':
-        // Check if it's a PDF file and redirect to PDF handler
-        const file = formData.get('file') as File;
-        if (file && file.type === 'application/pdf') {
-          documents = await handlePDFUpload(formData, collectionId);
-        } else {
-          documents = await handleFileUpload(formData, collectionId);
-        }
+        documents = await handleFileUpload(formData, collectionId);
         break;
       default:
         return NextResponse.json(
@@ -264,7 +259,7 @@ async function handleFileUpload(formData: FormData, collectionId: string) {
 
   const fileType = SUPPORTED_FILE_TYPES[file.type as keyof typeof SUPPORTED_FILE_TYPES];
   if (!fileType) {
-    throw new Error(`Unsupported file type: ${file.type}. Supported types: ${Object.keys(SUPPORTED_FILE_TYPES).join(', ')}, application/pdf`);
+    throw new Error(`Unsupported file type: ${file.type}. Supported types: ${Object.keys(SUPPORTED_FILE_TYPES).join(', ')}`);
   }
 
   const bytes = await file.arrayBuffer();

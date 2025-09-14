@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Mail, Lock, CheckCircle, X } from 'lucide-react';
+import { Mail, Lock, CheckCircle, X } from 'lucide-react';
 import { auth } from '@/firebase/config'; 
 import { 
   signInWithEmailAndPassword, 
@@ -10,7 +10,6 @@ import {
   sendEmailVerification,
   signOut
 } from 'firebase/auth';
-
 
 const GoogleIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -28,7 +27,6 @@ const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
 
-  // Check for verification notification on page load
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('verified') === 'false') {
@@ -40,15 +38,13 @@ const LoginPage: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setNotification(null); // Clear notification on new attempt
+    setNotification(null);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
       if (!userCredential.user.emailVerified) {
         setError("Please verify your email before logging in. Another verification email has been sent.");
-        // Resend verification email for convenience
         await sendEmailVerification(userCredential.user);
-        // Sign out the user until they are verified
         await signOut(auth); 
         setLoading(false);
         return;
@@ -77,65 +73,65 @@ const LoginPage: React.FC = () => {
     };
 
   return (
-    <div className="relative min-h-screen w-full bg-slate-900 text-white flex items-center justify-center p-4 overflow-hidden">
+    <div className="relative min-h-screen w-full bg-slate-50 text-slate-800 flex items-center justify-center p-4 overflow-hidden">
         <div className="absolute inset-0">
-            <div className="absolute top-0 -left-1/4 w-1/2 h-1/2 bg-gradient-to-br from-slate-800 to-slate-900 rounded-full filter blur-3xl opacity-40 animate-[pulse_8s_ease-in-out_infinite]" />
-            <div className="absolute bottom-0 -right-1/4 w-1/2 h-1/2 bg-gradient-to-tl from-blue-900/50 to-slate-900 rounded-full filter blur-3xl opacity-40 animate-[pulse_10s_ease-in-out_infinite_2s]" />
+            <div className="absolute top-0 -left-1/4 w-1/2 h-1/2 bg-gradient-to-br from-cyan-50 to-white rounded-full filter blur-3xl opacity-60 animate-[pulse_8s_ease-in-out_infinite]" />
+            <div className="absolute bottom-0 -right-1/4 w-1/2 h-1/2 bg-gradient-to-tl from-blue-100 to-white rounded-full filter blur-3xl opacity-60 animate-[pulse_10s_ease-in-out_infinite_2s]" />
         </div>
         <div className="relative z-10 w-full max-w-md">
-            <div className="bg-slate-800/60 backdrop-blur-lg border border-slate-700 rounded-2xl p-8 shadow-2xl">
+            <div className="bg-white/80 backdrop-blur-lg border border-slate-200 rounded-2xl p-8 shadow-2xl">
                 <div className="text-center mb-8">
                     <div className="flex justify-center mb-4">
-                        <div className="w-14 h-14 bg-slate-800 border border-slate-700 rounded-lg flex items-center justify-center">
+                        <div className="w-14 h-14 bg-white border border-slate-200 rounded-lg flex items-center justify-center shadow-sm">
                             <img src="/logo.png" alt="Logo" className='rounded-md' />
                         </div>
                     </div>
-                    <h1 className="text-3xl font-bold text-slate-100">Welcome Back</h1>
-                    <p className="text-slate-400 mt-2">Sign in to continue</p>
+                    <h1 className="text-3xl font-bold text-slate-900">Welcome Back</h1>
+                    <p className="text-slate-500 mt-2">Log in to continue</p>
                 </div>
 
                 {notification && (
-                    <div className="bg-green-500/10 border border-green-500/30 text-green-200 text-sm rounded-md p-3 mb-6 flex items-start justify-between">
+                    <div className="bg-green-50 border border-green-300 text-green-700 text-sm rounded-md p-3 mb-6 flex items-start justify-between">
                        <div className="flex items-start gap-2">
                          <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
                          <span>{notification}</span>
                        </div>
-                       <button onClick={() => setNotification(null)}><X className="w-4 h-4" /></button>
+                       <button onClick={() => setNotification(null)} className="text-green-700 hover:text-green-900"><X className="w-4 h-4" /></button>
                     </div>
                 )}
 
                 <form onSubmit={handleSignIn} className="space-y-6">
                     <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">Email Address</label>
+                        <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">Email Address</label>
                         <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                            <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-slate-700/50 border border-slate-600 rounded-md py-2.5 pl-10 pr-3 text-slate-100 placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="you@example.com" required />
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                            <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-white border border-slate-300 rounded-md py-2.5 pl-10 pr-3 text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="you@example.com" required />
                         </div>
                     </div>
                     <div>
-                        <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">Password</label>
+                        <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">Password</label>
                         <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                            <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-700/50 border border-slate-600 rounded-md py-2.5 pl-10 pr-3 text-slate-100 placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="••••••••" required />
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                            <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-white border border-slate-300 rounded-md py-2.5 pl-10 pr-3 text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="••••••••" required />
                         </div>
                     </div>
-                    {error && <p className="text-sm text-red-400 text-center">{error}</p>}
-                    <button type="submit" disabled={loading} className="w-full py-3 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-500 transform hover:scale-105 transition-all duration-200 shadow-lg disabled:bg-slate-600 disabled:scale-100">
-                        {loading ? 'Signing In...' : 'Sign In'}
+                    {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+                    <button type="submit" disabled={loading} className="w-full py-3 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transform hover:scale-105 transition-all duration-200 shadow-lg disabled:bg-slate-400 disabled:scale-100 disabled:cursor-not-allowed">
+                        {loading ? 'Signing In...' : 'Login'}
                     </button>
                     <div className="flex items-center">
-                        <div className="flex-grow border-t border-slate-700"></div>
+                        <div className="flex-grow border-t border-slate-300"></div>
                         <span className="flex-shrink mx-4 text-xs text-slate-500">OR</span>
-                        <div className="flex-grow border-t border-slate-700"></div>
+                        <div className="flex-grow border-t border-slate-300"></div>
                     </div>
-                    <button type="button" onClick={handleGoogleSignIn} disabled={loading} className="w-full flex items-center justify-center gap-3 py-3 bg-slate-200 text-slate-800 font-semibold rounded-md hover:bg-white transform hover:scale-105 transition-all duration-200 shadow-lg disabled:bg-slate-400 disabled:scale-100">
+                    <button type="button" onClick={handleGoogleSignIn} disabled={loading} className="w-full flex items-center justify-center gap-3 py-3 bg-white text-slate-700 font-semibold rounded-md border border-slate-300 hover:bg-slate-50 transform hover:scale-105 transition-all duration-200 shadow-sm disabled:bg-slate-200 disabled:scale-100 disabled:cursor-not-allowed">
                         <GoogleIcon />
-                        Sign in with Google
+                        Log in with Google
                     </button>
                 </form>
-                <p className="text-center text-sm text-slate-400 mt-8">
+                <p className="text-center text-sm text-slate-500 mt-8">
                     Don't have an account?{' '}
-                    <a href="/signup" className="font-medium text-blue-400 hover:underline">Sign Up</a>
+                    <a href="/signup" className="font-medium text-blue-600 hover:underline">Sign Up</a>
                 </p>
             </div>
         </div>

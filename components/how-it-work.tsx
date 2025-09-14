@@ -11,7 +11,6 @@ import {
   Shield,
   Rocket,
   Users,
-  ChevronRight
 } from 'lucide-react';
 
 // Interfaces remain the same
@@ -32,12 +31,11 @@ interface Feature {
 const HowItWorks: React.FC = () => {
   const [activeStep, setActiveStep] = useState<number>(0);
 
-  // Simplified the data structure, as colors are now handled by unified CSS classes
   const workSteps: WorkStep[] = [
     {
       id: 0,
-      title: "Upload Your PDF",
-      description: "Simply drag and drop or select your PDF document. All standard formats are supported.",
+      title: "Upload Your Document",
+      description: "Simply drag and drop or select your PDF, DOCX, or CSV file. All standard formats are supported.",
       icon: Upload,
       details: [
         "Supports files up to 5MB",
@@ -97,22 +95,22 @@ const HowItWorks: React.FC = () => {
     },
     {
       icon: Users,
-      title: "Collaborate & Share(coming soon)",
+      title: "Collaborate & Share (Coming Soon)",
       description: "Easily share documents and findings with team members for collaborative analysis."
     }
   ];
 
   return (
-    <section className="py-20 bg-slate-900 text-white">
+    <section className="py-20 bg-white text-slate-800">
       <div className="container mx-auto px-6">
         <div className="max-w-6xl mx-auto">
           {/* Section Header */}
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              How It <span className="text-blue-400">Works</span>
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-slate-900">
+              How It <span className="text-blue-600">Works</span>
             </h2>
-            <p className="text-lg text-slate-400 max-w-3xl mx-auto">
-              Our RAG (Retrieval-Augmented Generation) technology makes it simple to extract valuable insights from your PDF documents in four easy steps.
+            <p className="text-lg text-slate-600 max-w-3xl mx-auto">
+              Our RAG (Retrieval-Augmented Generation) technology makes it simple to extract valuable insights from your documents in four easy steps.
             </p>
           </div>
 
@@ -129,21 +127,21 @@ const HowItWorks: React.FC = () => {
                     onClick={() => setActiveStep(index)}
                     className={`cursor-pointer p-6 rounded-xl border transition-all duration-300 ${
                       isActive
-                        ? 'border-blue-500/50 bg-slate-800'
-                        : 'border-slate-800 bg-slate-800/50 hover:border-slate-700 hover:bg-slate-800'
+                        ? 'border-blue-500 bg-slate-50 shadow-lg'
+                        : 'border-slate-200 bg-transparent hover:border-slate-300 hover:bg-slate-50/50'
                     }`}
                   >
                     <div className="flex items-start gap-4">
                       <div className={`w-12 h-12 rounded-lg flex-shrink-0 flex items-center justify-center transition-colors duration-300 ${
-                        isActive ? 'bg-blue-500/10' : 'bg-slate-700/50'
+                        isActive ? 'bg-blue-100' : 'bg-slate-100'
                       }`}>
-                        <IconComponent className={`w-6 h-6 transition-colors duration-300 ${isActive ? 'text-blue-400' : 'text-slate-400'}`} />
+                        <IconComponent className={`w-6 h-6 transition-colors duration-300 ${isActive ? 'text-blue-600' : 'text-slate-500'}`} />
                       </div>
                       <div className="flex-1">
-                        <h3 className={`text-lg font-semibold mb-1 transition-colors duration-300 ${isActive ? 'text-white' : 'text-slate-200'}`}>
+                        <h3 className={`text-lg font-semibold mb-1 transition-colors duration-300 ${isActive ? 'text-slate-900' : 'text-slate-700'}`}>
                           {step.title}
                         </h3>
-                        <p className="text-sm text-slate-400">
+                        <p className="text-sm text-slate-500">
                           {step.description}
                         </p>
                       </div>
@@ -152,8 +150,8 @@ const HowItWorks: React.FC = () => {
                       <div className="mt-4 pl-16">
                         <ul className="space-y-2">
                           {step.details.map((detail, idx) => (
-                            <li key={idx} className="flex items-center gap-2 text-sm text-slate-300">
-                              <CheckCircle className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                            <li key={idx} className="flex items-center gap-2 text-sm text-slate-600">
+                              <CheckCircle className="w-4 h-4 text-blue-600 flex-shrink-0" />
                               {detail}
                             </li>
                           ))}
@@ -167,36 +165,36 @@ const HowItWorks: React.FC = () => {
 
             {/* Visual Demo */}
             <div className="relative">
-              <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 text-white shadow-lg">
+              <div className="bg-slate-50/50 border border-slate-200 rounded-2xl p-6 text-slate-800 shadow-lg">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-slate-600"></div>
-                    <div className="w-3 h-3 rounded-full bg-slate-600"></div>
-                    <div className="w-3 h-3 rounded-full bg-slate-600"></div>
+                    <div className="w-3 h-3 rounded-full bg-slate-300"></div>
+                    <div className="w-3 h-3 rounded-full bg-slate-300"></div>
+                    <div className="w-3 h-3 rounded-full bg-slate-300"></div>
                   </div>
-                  <span className="text-slate-500 text-sm font-medium">AI Chat Interface</span>
+                  <span className="text-slate-400 text-sm font-medium">AI Chat Interface</span>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3 text-sm text-slate-400">
-                    <FileText className="w-4 h-4 text-slate-400" />
+                  <div className="flex items-center gap-3 text-sm text-slate-500">
+                    <FileText className="w-4 h-4" />
                     <span>research-paper.pdf uploaded and analyzed.</span>
                   </div>
 
-                  <div className="bg-slate-700/50 border border-slate-700 rounded-lg p-3">
-                    <p className="text-sm text-slate-400 mb-1">You:</p>
-                    <p className="text-slate-100">What are the main conclusions of this research?</p>
+                  <div className="bg-white border border-slate-200 rounded-lg p-3">
+                    <p className="text-sm text-slate-500 mb-1">You:</p>
+                    <p className="text-slate-800">What are the main conclusions of this research?</p>
                   </div>
 
-                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
-                    <p className="text-sm text-blue-300 mb-2 font-medium">AI Assistant:</p>
-                    <p className="text-slate-100">The paper concludes with three main findings:</p>
-                    <ul className="mt-2 space-y-1 text-sm text-slate-200 list-disc list-inside">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-sm text-blue-600 mb-2 font-medium">AI Assistant:</p>
+                    <p className="text-slate-800">The paper concludes with three main findings:</p>
+                    <ul className="mt-2 space-y-1 text-sm text-slate-700 list-disc list-inside">
                       <li>Model accuracy improved by 95% with the new method.</li>
                       <li>Data processing time was reduced by 60%.</li>
                       <li>Overall cost efficiency saw a 40% increase.</li>
                     </ul>
-                    <p className="text-xs text-blue-400/80 mt-3 opacity-80">📄 Source: Page 15-17, Section 4.2</p>
+                    <p className="text-xs text-blue-500 mt-3 opacity-80">📄 Source: Page 15-17, Section 4.2</p>
                   </div>
                 </div>
               </div>
@@ -204,16 +202,16 @@ const HowItWorks: React.FC = () => {
           </div>
 
           {/* Features Grid */}
-          <div className="grid md:grid-cols-3 gap-8 pt-10 border-t border-slate-800">
+          <div className="grid md:grid-cols-3 gap-8 pt-10 border-t border-slate-200">
             {features.map((feature, index) => {
               const IconComponent = feature.icon;
               return (
-                <div key={index} className="text-center p-6 bg-slate-800/50 border border-slate-800 rounded-xl transition-all hover:border-slate-700 hover:bg-slate-800">
-                  <div className="w-14 h-14 bg-slate-700/50 border border-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <IconComponent className="w-7 h-7 text-blue-400" />
+                <div key={index} className="text-center p-6 bg-slate-50/50 border border-slate-200 rounded-xl transition-all hover:shadow-lg hover:-translate-y-1">
+                  <div className="w-14 h-14 bg-white border border-slate-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <IconComponent className="w-7 h-7 text-blue-600" />
                   </div>
-                  <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
-                  <p className="text-slate-400 text-sm">{feature.description}</p>
+                  <h3 className="text-lg font-semibold text-slate-800 mb-2">{feature.title}</h3>
+                  <p className="text-slate-500 text-sm">{feature.description}</p>
                 </div>
               );
             })}

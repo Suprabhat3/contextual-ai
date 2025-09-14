@@ -70,6 +70,7 @@ interface DocumentSource {
 /*********** CONSTANTS ***********/
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const PREVIEW_LENGTH = 200;
+const MAX_DOCUMENTS = 2; // Document upload limit
 
 const SUPPORTED_FILE_TYPES = {
   'application/pdf': 'pdf',
@@ -111,6 +112,9 @@ const ragAPI = {
     return response.json();
   },
 };
+  const handleNavigation = (path: string) => {
+    window.location.href = path;
+  };
 
 /*********** UTILITY FUNCTIONS ***********/
 const isValidUrl = (u: string) => {
@@ -135,11 +139,11 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
   children
 }) => (
   <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-    <div className="w-full max-w-sm bg-slate-800 border border-white/10 rounded-xl p-4">
+    <div className="w-full max-w-sm bg-white border border-gray-200 rounded-xl p-4 shadow-lg">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="font-semibold text-white">{title}</h3>
+        <h3 className="font-semibold text-black">{title}</h3>
         <button onClick={onClose}>
-          <X className="w-4 h-4 text-gray-400" />
+          <X className="w-4 h-4 text-gray-600" />
         </button>
       </div>
       {children}
@@ -149,29 +153,29 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
 
 const PreviewModal: React.FC<{ file: UploadedFile; onClose: () => void }> = ({ file, onClose }) => (
   <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-    <div className="w-full max-w-2xl bg-slate-800 border border-white/10 rounded-xl p-6">
+    <div className="w-full max-w-2xl bg-white border border-gray-200 rounded-xl p-6 shadow-lg">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-white">Document Preview</h3>
+        <h3 className="font-semibold text-black">Document Preview</h3>
         <button onClick={onClose}>
-          <X className="w-5 h-5 text-gray-400" />
+          <X className="w-5 h-5 text-gray-600" />
         </button>
       </div>
       <div className="mb-4">
-        <div className="flex items-center gap-2 text-sm text-gray-300 mb-2">
+        <div className="flex items-center gap-2 text-sm text-gray-700 mb-2">
           <span className="font-medium">{file.name}</span>
           {file.size && <span>({formatBytes(file.size)})</span>}
-          <span className="text-xs bg-blue-500/20 px-2 py-1 rounded uppercase">{file.type}</span>
+          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded uppercase">{file.type}</span>
         </div>
         {file.type === 'youtube' && file.title && (
-          <div className="text-sm text-gray-400">
+          <div className="text-sm text-gray-600">
             <p><strong>Title:</strong> {file.title}</p>
             {file.author && <p><strong>Author:</strong> {file.author}</p>}
             {file.duration && <p><strong>Duration:</strong> {file.duration}</p>}
           </div>
         )}
       </div>
-      <div className="max-h-96 overflow-y-auto bg-black/20 rounded-lg p-4">
-        <pre className="text-sm text-gray-200 whitespace-pre-wrap">
+      <div className="max-h-96 overflow-y-auto bg-gray-50 rounded-lg p-4">
+        <pre className="text-sm text-gray-800 whitespace-pre-wrap">
           {file.preview || 'No preview available'}
         </pre>
       </div>
@@ -183,58 +187,76 @@ const UploadOptionsModal: React.FC<{
   onClose: () => void; 
   onSelectOption: (option: string) => void;
   checkAuth: () => boolean;
-}> = ({ onClose, onSelectOption, checkAuth }) => (
+  isUploadingAny: boolean;
+  canUploadMore: boolean;
+}> = ({ onClose, onSelectOption, checkAuth, isUploadingAny, canUploadMore }) => (
   <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-    <div className="w-full max-w-md bg-slate-800 border border-white/10 rounded-xl p-6">
+    <div className="w-full max-w-md bg-white border border-gray-200 rounded-xl p-6 shadow-lg">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-white">Add Content</h3>
+        <h3 className="text-lg font-semibold text-black">Add Content</h3>
         <button onClick={onClose}>
-          <X className="w-5 h-5 text-gray-400" />
+          <X className="w-5 h-5 text-gray-600" />
         </button>
       </div>
       
+      {!canUploadMore && (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="text-sm text-amber-800">
+            You've reached the maximum limit of {MAX_DOCUMENTS} documents. Remove existing documents to upload new ones.
+          </p>
+        </div>
+      )}
+      
       <div className="space-y-3">
         <button
-          onClick={() => { checkAuth() && onSelectOption('file'); onClose(); }}
-          className="w-full flex items-center gap-4 p-4 bg-black/20 border border-white/10 rounded-lg hover:bg-white/10 transition-colors text-left"
+          onClick={() => { checkAuth() && canUploadMore && onSelectOption('file'); onClose(); }}
+          disabled={!canUploadMore || isUploadingAny}
+          className="w-full flex items-center gap-4 p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <File className="w-6 h-6 text-blue-400" />
+          <File className="w-6 h-6 text-blue-500" />
           <div>
-            <span className="text-gray-200 text-base block font-medium">Upload Files</span>
-            <span className="text-xs text-gray-400">PDF, DOCX, TXT, CSV, JSON (Max 10MB)</span>
+            <span className="text-gray-800 text-base block font-medium">Upload Files</span>
+            <span className="text-xs text-gray-600">PDF, DOCX, TXT, CSV, JSON (Max 10MB)</span>
+            {!canUploadMore && <span className="text-xs text-red-600">Limit reached ({MAX_DOCUMENTS}/{MAX_DOCUMENTS})</span>}
           </div>
         </button>
 
         <button
-          onClick={() => { checkAuth() && onSelectOption('text'); onClose(); }}
-          className="w-full flex items-center gap-4 p-4 bg-black/20 border border-white/10 rounded-lg hover:bg-white/10 transition-colors text-left"
+          onClick={() => { checkAuth() && canUploadMore && onSelectOption('text'); onClose(); }}
+          disabled={!canUploadMore || isUploadingAny}
+          className="w-full flex items-center gap-4 p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Type className="w-6 h-6 text-green-400" />
+          <Type className="w-6 h-6 text-green-500" />
           <div>
-            <span className="text-gray-200 text-base block font-medium">Paste Text</span>
-            <span className="text-xs text-gray-400">Add text content directly</span>
+            <span className="text-gray-800 text-base block font-medium">Paste Text</span>
+            <span className="text-xs text-gray-600">Add text content directly</span>
+            {!canUploadMore && <span className="text-xs text-red-600">Limit reached ({MAX_DOCUMENTS}/{MAX_DOCUMENTS})</span>}
           </div>
         </button>
 
         <button
-          onClick={() => { checkAuth() && onSelectOption('url'); onClose(); }}
-          className="w-full flex items-center gap-4 p-4 bg-black/20 border border-white/10 rounded-lg hover:bg-white/10 transition-colors text-left"
+          onClick={() => { checkAuth() && canUploadMore && onSelectOption('url'); onClose(); }}
+          disabled={!canUploadMore || isUploadingAny}
+          className="w-full flex items-center gap-4 p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Globe className="w-6 h-6 text-purple-400" />
+          <Globe className="w-6 h-6 text-purple-500" />
           <div>
-            <span className="text-gray-200 text-base block font-medium">Web Page</span>
-            <span className="text-xs text-gray-400">Extract content from website</span>
+            <span className="text-gray-800 text-base block font-medium">Web Page</span>
+            <span className="text-xs text-gray-600">Extract content from website</span>
+            {!canUploadMore && <span className="text-xs text-red-600">Limit reached ({MAX_DOCUMENTS}/{MAX_DOCUMENTS})</span>}
           </div>
         </button>
 
         <button
-          onClick={() => { checkAuth() && onSelectOption('youtube'); onClose(); }}
-          className="w-full flex items-center gap-4 p-4 bg-black/20 border border-white/10 rounded-lg hover:bg-white/10 transition-colors text-left"
+          onClick={() => { checkAuth() && canUploadMore && onSelectOption('youtube'); onClose(); }}
+          disabled={!canUploadMore || isUploadingAny}
+          className="w-full flex items-center gap-4 p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Youtube className="w-6 h-6 text-red-400" />
+          <Youtube className="w-6 h-6 text-red-500" />
           <div>
-            <span className="text-gray-200 text-base block font-medium">YouTube Video</span>
-            <span className="text-xs text-gray-400">Extract transcript from video</span>
+            <span className="text-gray-800 text-base block font-medium">YouTube Video</span>
+            <span className="text-xs text-gray-600">Extract transcript from video</span>
+            {!canUploadMore && <span className="text-xs text-red-600">Limit reached ({MAX_DOCUMENTS}/{MAX_DOCUMENTS})</span>}
           </div>
         </button>
       </div>
@@ -268,7 +290,7 @@ const fileIcon = (type: UploadedFile['type']) => {
 const initialWelcomeMessage: Message = {
   id: 'welcome',
   type: 'assistant',
-  content: 'Hello! Upload documents (PDF, DOCX, TXT, CSV, JSON), add text, share a website URL, or paste a YouTube video link, then ask me anything about it.',
+  content: `Hello! Upload up to ${MAX_DOCUMENTS} documents (PDF, DOCX, TXT, CSV, JSON), add text, share a website URL, or paste a YouTube video link, then ask me anything about it.`,
   timestamp: new Date()
 };
 
@@ -287,11 +309,18 @@ export default function ContextualAIChatUI() {
   const [showTextModal, setShowTextModal] = useState(false);
   const [textContent, setTextContent] = useState('');
   const [showPreview, setShowPreview] = useState<UploadedFile | null>(null);
+  const [isUploadingText, setIsUploadingText] = useState(false);
+  const [isUploadingUrl, setIsUploadingUrl] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const desktopTextareaRef = useRef<HTMLTextAreaElement>(null);
   const mobileTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Computed values
+  const successfulFiles = uploadedFiles.filter((f) => f.status === 'success');
+  const canUploadMore = successfulFiles.length < MAX_DOCUMENTS;
+  const isUploadingAny = uploadedFiles.some((f) => f.status === 'uploading') || isUploadingText || isUploadingUrl;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -344,8 +373,17 @@ export default function ContextualAIChatUI() {
   const handleFileUpload = async (files: FileList | null) => {
     if (!checkAuth()) return;
     if (!files) return;
+    if (!canUploadMore) {
+      alert(`You can only upload up to ${MAX_DOCUMENTS} documents. Please remove existing documents first.`);
+      return;
+    }
 
-    Array.from(files).forEach(async (file) => {
+    const filesToProcess = Array.from(files).slice(0, MAX_DOCUMENTS - successfulFiles.length);
+    if (filesToProcess.length < files.length) {
+      alert(`Only ${filesToProcess.length} file(s) will be uploaded to stay within the ${MAX_DOCUMENTS} document limit.`);
+    }
+
+    filesToProcess.forEach(async (file) => {
       const fileType = SUPPORTED_FILE_TYPES[file.type as keyof typeof SUPPORTED_FILE_TYPES];
       if (!fileType) {
         alert(`Unsupported file type: ${file.type}. Supported types: PDF, DOCX, TXT, CSV, JSON`);
@@ -407,6 +445,12 @@ export default function ContextualAIChatUI() {
   const handleTextUpload = async () => {
     if (!checkAuth()) return;
     if (!textContent.trim()) return;
+    if (!canUploadMore) {
+      alert(`You can only upload up to ${MAX_DOCUMENTS} documents. Please remove existing documents first.`);
+      return;
+    }
+
+    setIsUploadingText(true);
 
     const id = crypto.randomUUID();
     const name = `Text: ${textContent.slice(0, 30)}${textContent.length > 30 ? '…' : ''}`;
@@ -451,6 +495,8 @@ export default function ContextualAIChatUI() {
           } : f
         )
       );
+    } finally {
+      setIsUploadingText(false);
     }
 
     setTextContent('');
@@ -460,6 +506,12 @@ export default function ContextualAIChatUI() {
   const handleUrlUpload = async () => {
     if (!checkAuth()) return;
     if (!isValidUrl(url)) return;
+    if (!canUploadMore) {
+      alert(`You can only upload up to ${MAX_DOCUMENTS} documents. Please remove existing documents first.`);
+      return;
+    }
+
+    setIsUploadingUrl(true);
 
     const id = crypto.randomUUID();
     const isYoutube = isYouTubeUrl(url);
@@ -507,6 +559,8 @@ export default function ContextualAIChatUI() {
           } : f
         )
       );
+    } finally {
+      setIsUploadingUrl(false);
     }
 
     setUrl('');
@@ -531,8 +585,6 @@ export default function ContextualAIChatUI() {
   const sendMessage = async () => {
     if (!checkAuth()) return;
     if (!inputMessage.trim()) return;
-
-    const successfulFiles = uploadedFiles.filter((f) => f.status === 'success');
 
     const userMsg: Message = {
       id: crypto.randomUUID(),
@@ -593,7 +645,7 @@ export default function ContextualAIChatUI() {
       const assistantMsg: Message = {
         id: crypto.randomUUID(),
         type: 'assistant',
-        content: 'Please upload a document, add text, or share a URL/YouTube video first so I can help answer questions about it.',
+        content: `Please upload up to ${MAX_DOCUMENTS} documents, add text, or share a URL/YouTube video first so I can help answer questions about it.`,
         timestamp: new Date(),
         userId: 'assistant-id',
       };
@@ -612,38 +664,39 @@ export default function ContextualAIChatUI() {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-slate-900">
+      <div className="h-screen flex items-center justify-center bg-white">
         <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex bg-slate-900 text-white relative">
+  <div className="h-screen flex bg-white text-black relative">
       {/* ===== DESKTOP LAYOUT ===== */}
       <div className="hidden md:flex w-full flex-col">
         {/* Header */}
-        <header className="flex items-center gap-3 px-6 py-4 border-b border-white/10 bg-black/20 backdrop-blur-sm">
+  <header className="flex items-center gap-3 px-6 py-4 border-b border-black/10 bg-black/5">
           <button 
             onClick={() => setShowSidebar(true)} 
-            className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            className="p-2 text-gray-900 hover:text-white hover:bg-black/70 rounded-lg transition-colors"
             title="Open data sources"
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="w-8 h-8 bg-gradient-to-r from-blue-200 to-purple-200 rounded-lg" />
-          <div className="flex-1">
-            <h1 className="text-lg font-semibold text-white">Contextual AI Chat</h1>
-            <p className="text-sm text-gray-300">Ask questions about your documents</p>
+          <div className="w-8 h-8 bg-black rounded-lg" >
+          <span><img src="/logo.png" alt="" className='rounded-md' /></span> </div>
+          <div className="flex-1 cursor-pointer"  onClick={() => handleNavigation('/')}>
+            <h1 className="text-lg font-semibold text-black">Contextual AI</h1>
+            <p className="text-sm text-black/60">Ask questions about your documents ({successfulFiles.length}/{MAX_DOCUMENTS} uploaded)</p>
           </div>
           {user ? (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-black/60">
                 {user.email || 'Anonymous'}
               </span>
               <button
                 onClick={handleSignOut}
-                className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                className="p-2 text-black/60 hover:text-black hover:bg-black/10 rounded-lg transition-colors"
                 title="Sign Out"
               >
                 <LogOut className="w-4 h-4" />
@@ -652,7 +705,7 @@ export default function ContextualAIChatUI() {
           ) : (
             <button
               onClick={() => router.push('/signup')}
-              className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300"
+              className="flex items-center gap-2 text-sm text-black hover:text-black/60"
             >
               <LogIn className="w-4 h-4" />
               Sign In
@@ -662,11 +715,11 @@ export default function ContextualAIChatUI() {
 
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col">
-          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 bg-slate-900">
+    <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 bg-white">
             {messages.map((msg) => (
               <div key={msg.id} className={`flex gap-3 ${msg.type === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                 <div
-                  className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${msg.type === 'user' ? 'bg-blue-500 text-white' : 'bg-white/10 text-gray-300'
+                  className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${msg.type === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'
                     }`}
                 >
                   {msg.type === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
@@ -675,11 +728,11 @@ export default function ContextualAIChatUI() {
                 <div className={`flex-1 max-w-3xl ${msg.type === 'user' ? 'text-right' : 'text-left'}`}>
                   <div
                     className={`inline-block px-4 py-3 rounded-2xl ${msg.type === 'user'
-                        ? 'bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 text-white'
-                        : 'bg-black/20 backdrop-blur-sm border border-white/10 text-gray-100'
+                        ? 'bg-black/5 border border-black/20 text-black'
+                        : 'bg-black/10 border border-black/10 text-black'
                       }`}
                   >
-                    <div className="prose prose-invert prose-sm max-w-none text-left">
+                    <div className="prose prose-sm max-w-none text-left">
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
@@ -706,7 +759,7 @@ export default function ContextualAIChatUI() {
                     </div>
 
                     {msg.attachments && msg.attachments.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-white/10 space-y-1">
+                      <div className="mt-2 pt-2 border-t border-black/10 space-y-1">
                         {msg.attachments.map((f) => (
                           <div key={f.id} className="flex items-center gap-2 text-sm opacity-90">
                             {fileIcon(f.type)}
@@ -718,18 +771,18 @@ export default function ContextualAIChatUI() {
                     )}
 
                     {msg.sources && msg.sources.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-white/10">
-                        <p className="text-xs text-gray-400 mb-1">Sources:</p>
+                      <div className="mt-2 pt-2 border-t border-black/10">
+                        <p className="text-xs text-black/60 mb-1">Sources:</p>
                         {msg.sources.slice(0, 3).map((source, idx) => (
-                          <div key={idx} className="text-xs bg-black/20 rounded p-2 mb-1">
+                          <div key={idx} className="text-xs bg-black/5 rounded p-2 mb-1">
                             <p className="truncate">{source.content}</p>
-                            <span className="text-gray-500">Score: {source.score.toFixed(3)}</span>
+                            <span className="text-black/40">Score: {source.score.toFixed(3)}</span>
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
-                  <div className="text-xs text-gray-400 mt-1">
+                  <div className="text-xs text-black/60 mt-1">
                     {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
@@ -738,11 +791,11 @@ export default function ContextualAIChatUI() {
 
             {isTyping && (
               <div className="flex gap-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white/10 text-gray-300 flex items-center justify-center">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center">
                   <Bot className="w-4 h-4" />
                 </div>
-                <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-2xl px-4 py-3 flex items-center gap-2 text-gray-200">
-                  <Loader2 className="w-4 h-4 animate-spin text-gray-300" /> AI is thinking…
+                <div className="bg-gray-100 border border-gray-200 rounded-2xl px-4 py-3 flex items-center gap-2 text-gray-700">
+                  <Loader2 className="w-4 h-4 animate-spin text-gray-600" /> AI is thinking…
                 </div>
               </div>
             )}
@@ -750,21 +803,26 @@ export default function ContextualAIChatUI() {
           </div>
 
           {/* Input Area - Fixed at bottom */}
-          <div className="bg-slate-900 border-t border-white/30 px-6 py-8">
+          <div className="bg-white border-t border-black/20 px-6 py-8">
             <div className="max-w-4xl mx-auto">
-              {uploadedFiles.filter((f) => f.status === 'success').length > 0 && (
-                <div className="mb-3 flex items-center gap-2 text-xs text-gray-400">
+              {successfulFiles.length > 0 && (
+                <div className="mb-3 flex items-center gap-2 text-xs text-black/60">
                   <CheckCircle className="w-3 h-3 text-green-400" />
-                  <span>{uploadedFiles.filter((f) => f.status === 'success').length} source(s) ready</span>
+                  <span>{successfulFiles.length}/{MAX_DOCUMENTS} source(s) ready</span>
                 </div>
               )}
               <div className="flex items-end gap-3">
                 <button
                   onClick={() => checkAuth() && setShowUploadModal(true)}
-                  className="flex-shrink-0 p-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-colors flex items-center justify-center h-12 w-12"
+                  disabled={isUploadingAny}
+                  className="flex-shrink-0 p-3 bg-black/5 hover:bg-black/10 border border-black/10 rounded-xl transition-colors flex items-center justify-center h-12 w-12 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Add content"
                 >
-                  <Paperclip className="w-5 h-5 text-gray-300" />
+                  {isUploadingAny ? (
+                    <Loader2 className="w-5 h-5 text-gray-600 animate-spin" />
+                  ) : (
+                    <Paperclip className="w-5 h-5 text-gray-600" />
+                  )}
                 </button>
                 <div className="flex-1 flex flex-col">
                   <textarea
@@ -773,20 +831,15 @@ export default function ContextualAIChatUI() {
                     onChange={(e) => setInputMessage(e.target.value)}
                     onKeyDown={onKeyDown}
                     placeholder="Ask a question about your documents..."
-                    className="w-full px-4 py-3 bg-white/10 border border-white/10 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400 backdrop-blur-sm scrollbar-hide overflow-hidden"
+                    className="w-full px-4 py-3 bg-black/5 border border-black/10 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black placeholder-black/40 backdrop-blur-sm scrollbar-hide overflow-hidden"
                     rows={1}
                     style={{ minHeight: 48, maxHeight: 120 }}
                   />
-                  {/* {inputMessage && (
-                    <div className="text-xs text-gray-500 text-right pr-2 mt-2 mb-0">
-                      {inputMessage.length}/1000
-                    </div>
-                  )} */}
                 </div>
                 <button
                   onClick={sendMessage}
                   disabled={!inputMessage.trim()}
-                  className="flex-shrink-0 p-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl text-white hover:from-blue-600 hover:to-purple-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-blue-500 disabled:hover:to-purple-500 shadow-lg flex items-center justify-center h-12 w-12"
+                  className="flex-shrink-0 p-3 bg-black text-white rounded-xl hover:bg-black/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center justify-center h-12 w-12"
                 >
                   <Send className="w-5 h-5" />
                 </button>
@@ -801,51 +854,68 @@ export default function ContextualAIChatUI() {
           onClick={() => setShowSidebar(false)}
         />
         <aside
-          className={`fixed top-0 left-0 h-full w-1/3 max-w-sm bg-slate-900/95 backdrop-blur-md border-r border-white/10 z-50 transition-transform ${showSidebar ? 'translate-x-0' : '-translate-x-full'
+          className={`fixed top-0 left-0 h-full w-1/3 max-w-sm bg-white/95 backdrop-blur-md border-r border-gray-200 z-50 transition-transform ${showSidebar ? 'translate-x-0' : '-translate-x-full'
             }`}
         >
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-            <h2 className="text-xl font-semibold text-white">Data Sources</h2>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-black">Data Sources</h2>
             <button onClick={() => setShowSidebar(false)}>
-              <X className="w-5 h-5 text-gray-400" />
+              <X className="w-5 h-5 text-gray-600" />
             </button>
           </div>
 
           <div className="flex-1 p-4 space-y-3 overflow-y-auto">
             <button
               onClick={() => {checkAuth() && setShowUploadModal(true); setShowSidebar(false);}}
-              className="w-full flex items-center gap-4 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-400/20 rounded-lg hover:from-blue-500/20 hover:to-purple-500/20 transition-all text-left"
+              disabled={isUploadingAny}
+              className="w-full flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg hover:from-blue-100 hover:to-purple-100 transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Plus className="w-6 h-6 text-blue-400" />
+              {isUploadingAny ? (
+                <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+              ) : (
+                <Plus className="w-6 h-6 text-blue-500" />
+              )}
               <div>
-                <span className="text-white text-lg block font-medium">Add Content</span>
-                <span className="text-xs text-gray-400">Files, text, URLs, YouTube videos</span>
+                <span className="text-gray-800 text-lg block font-medium">
+                  {isUploadingAny ? 'Adding...' : 'Add Content'}
+                </span>
+                <span className="text-xs text-gray-600">
+                  {isUploadingAny 
+                    ? 'Processing your content...' 
+                    : `Files, text, URLs, YouTube videos (${successfulFiles.length}/${MAX_DOCUMENTS})`
+                  }
+                </span>
               </div>
             </button>
 
             {uploadedFiles.length > 0 && (
               <div className="mt-6 space-y-2">
-                <h3 className="text-sm font-medium text-gray-300 uppercase tracking-wide">Uploaded Sources ({uploadedFiles.length})</h3>
+                <h3 className="text-sm font-medium text-gray-700 uppercase tracking-wide">
+                  Uploaded Sources ({successfulFiles.length}/{MAX_DOCUMENTS})
+                </h3>
                 {uploadedFiles.map((f) => (
-                  <div key={f.id} className="flex items-center gap-3 p-3 bg-black/30 rounded-lg border border-white/10">
+                  <div key={f.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                     {fileIcon(f.type)}
                     <div className="flex-1 min-w-0">
-                      <span className="text-sm text-gray-200 block truncate">{f.name}</span>
-                      {f.size && <span className="text-xs text-gray-400">{formatBytes(f.size)}</span>}
+                      <span className="text-sm text-gray-800 block truncate">{f.name}</span>
+                      {f.size && <span className="text-xs text-gray-600">{formatBytes(f.size)}</span>}
                       {f.uploadedAt && (
                         <span className="text-xs text-gray-500">
                           {f.uploadedAt.toLocaleDateString()}
                         </span>
                       )}
+                      {f.error && (
+                        <span className="text-xs text-red-600">{f.error}</span>
+                      )}
                     </div>
                     <div className="flex items-center gap-1">
-                      {f.status === 'uploading' && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+                      {f.status === 'uploading' && <Loader2 className="w-4 h-4 animate-spin text-gray-600" />}
                       {f.status === 'success' && <CheckCircle className="w-4 h-4 text-green-400" />}
                       {f.status === 'error' && <AlertCircle className="w-4 h-4 text-red-400" />}
                       {f.preview && f.status === 'success' && (
                         <button
                           onClick={() => setShowPreview(f)}
-                          className="text-gray-400 hover:text-gray-200"
+                          className="text-gray-600 hover:text-gray-800"
                           title="Preview"
                         >
                           <Eye className="w-4 h-4" />
@@ -853,7 +923,7 @@ export default function ContextualAIChatUI() {
                       )}
                       <button
                         onClick={() => removeFile(f.id)}
-                        className="text-gray-400 hover:text-gray-200"
+                        className="text-gray-600 hover:text-gray-800"
                         title="Remove"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -869,19 +939,20 @@ export default function ContextualAIChatUI() {
 
       {/* ===== MOBILE LAYOUT ===== */}
       <div className="md:hidden h-full w-full flex flex-col">
-        <header className="flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-black/20 backdrop-blur-sm">
+        <header className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 bg-gray-50">
           <button onClick={() => setShowSidebar((s) => !s)} className="p-1">
-            <Menu className="w-5 h-5 text-gray-300" />
+            <Menu className="w-5 h-5 text-gray-700" />
           </button>
-          <div className="w-7 h-7 bg-gradient-to-r from-blue-200 to-purple-200 rounded-md" />
-          <div>
-            <h1 className="text-base font-semibold text-white">Contextual AI</h1>
-            <p className="text-xs text-gray-400">Ask about your docs</p>
+          <div className="w-7 h-7 bg-gradient-to-r from-blue-500 to-purple-500 rounded-md">
+            <span><img src="/logo.png" alt="" className='rounded-md' /></span> </div>
+          <div className="flex-1 cursor-pointer"  onClick={() => handleNavigation('/')}>
+            <h1 className="text-base font-semibold text-black">Contextual AI</h1>
+            <p className="text-xs text-gray-600">Ask about your docs ({successfulFiles.length}/{MAX_DOCUMENTS})</p>
           </div>
           {user && (
             <button
               onClick={handleSignOut}
-              className="ml-auto p-1 text-gray-400 hover:text-white"
+              className="ml-auto p-1 text-gray-600 hover:text-black"
               title="Sign Out"
             >
               <LogOut className="w-4 h-4" />
@@ -893,18 +964,18 @@ export default function ContextualAIChatUI() {
           {messages.map((msg) => (
             <div key={msg.id} className={`flex gap-2 ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.type === 'assistant' && (
-                <div className="w-7 h-7 rounded-full bg-white/10 flex-shrink-0 flex items-center justify-center">
-                  <Bot className="w-3.5 h-3.5 text-gray-300" />
+                <div className="w-7 h-7 rounded-full bg-gray-100 flex-shrink-0 flex items-center justify-center">
+                  <Bot className="w-3.5 h-3.5 text-gray-700" />
                 </div>
               )}
               <div className={`max-w-[75%] ${msg.type === 'user' ? 'text-right' : 'text-left'}`}>
                 <div
                   className={`inline-block px-3 py-2 rounded-2xl text-sm ${msg.type === 'user'
-                      ? 'bg-blue-500/20 text-white'
-                      : 'bg-black/20 text-gray-100 border border-white/10'
+                      ? 'bg-blue-100 text-black'
+                      : 'bg-gray-100 text-black border border-gray-200'
                     }`}
                 >
-                  <div className="prose prose-invert prose-sm max-w-none text-left">
+                  <div className="prose prose-sm max-w-none text-left">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
@@ -930,7 +1001,7 @@ export default function ContextualAIChatUI() {
                     </ReactMarkdown>
                   </div>
                   {msg.attachments && msg.attachments.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-white/10 space-y-1">
+                    <div className="mt-2 pt-2 border-t border-gray-200 space-y-1">
                       {msg.attachments.map((f) => (
                         <div key={f.id} className="flex items-center gap-1.5 text-xs">
                           {fileIcon(f.type)}
@@ -941,17 +1012,17 @@ export default function ContextualAIChatUI() {
                     </div>
                   )}
                   {msg.sources && msg.sources.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-white/10">
-                      <p className="text-xs text-gray-400 mb-1">Sources:</p>
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <p className="text-xs text-gray-600 mb-1">Sources:</p>
                       {msg.sources.slice(0, 2).map((source, idx) => (
-                        <div key={idx} className="text-xs bg-black/20 rounded p-1 mb-1">
+                        <div key={idx} className="text-xs bg-gray-50 rounded p-1 mb-1">
                           <p className="truncate">{source.content.slice(0, 50)}...</p>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
-                <div className="text-xs text-gray-400 mt-1">
+                <div className="text-xs text-gray-600 mt-1">
                   {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
@@ -965,10 +1036,10 @@ export default function ContextualAIChatUI() {
 
           {isTyping && (
             <div className="flex gap-2">
-              <div className="w-7 h-7 rounded-full bg-white/10 flex-shrink-0 flex items-center justify-center">
-                <Bot className="w-3.5 h-3.5 text-gray-300" />
+              <div className="w-7 h-7 rounded-full bg-gray-100 flex-shrink-0 flex items-center justify-center">
+                <Bot className="w-3.5 h-3.5 text-gray-700" />
               </div>
-              <div className="bg-black/20 border border-white/10 rounded-2xl px-3 py-2 text-sm text-gray-300 flex items-center gap-2">
+              <div className="bg-gray-100 border border-gray-200 rounded-2xl px-3 py-2 text-sm text-gray-700 flex items-center gap-2">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" /> AI is thinking…
               </div>
             </div>
@@ -977,22 +1048,28 @@ export default function ContextualAIChatUI() {
         </div>
 
         {/* Enhanced Mobile Input Area */}
-        <div className="bg-gradient-to-r from-black/20 to-black/30 border-t border-white/10 px-3 py-3">
-          {uploadedFiles.filter((f) => f.status === 'success').length > 0 && (
-            <div className="flex items-center gap-2 text-xs text-gray-400 mb-2 px-1">
+        <div className="bg-gray-50 border-t border-gray-200 px-3 py-3">
+          {successfulFiles.length > 0 && (
+            <div className="flex items-center gap-2 text-xs text-gray-600 mb-2 px-1">
               <CheckCircle className="w-3 h-3 text-green-400" />
-              <span>{uploadedFiles.filter((f) => f.status === 'success').length} source(s) ready</span>
+              <span>{successfulFiles.length}/{MAX_DOCUMENTS} source(s) ready</span>
             </div>
           )}
-          <div className="flex items-end gap-2">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => {checkAuth() && setShowUploadModal(true); setShowSidebar(false);}}
-              className="flex-shrink-0 p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-colors"
+              disabled={isUploadingAny}
+              className="flex-shrink-0 h-10 w-10 p-0 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               title="Add content"
+              style={{ minWidth: 40, minHeight: 40 }}
             >
-              <Paperclip className="w-4 h-4 text-gray-300" />
+              {isUploadingAny ? (
+                <Loader2 className="w-4 h-4 text-gray-600 animate-spin" />
+              ) : (
+                <Paperclip className="w-4 h-4 text-gray-600" />
+              )}
             </button>
-            <div className="flex-1 relative mb-0">
+            <div className="flex-1 relative">
               <textarea
                 ref={mobileTextareaRef}
                 value={inputMessage}
@@ -1000,8 +1077,8 @@ export default function ContextualAIChatUI() {
                 onKeyDown={onKeyDown}
                 placeholder="Ask a question…"
                 rows={1}
-                className="w-full px-3 py-2 bg-white/10 border border-white/10 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400 backdrop-blur-sm scrollbar-hide overflow-hidden"
-                style={{ minHeight: 40, maxHeight: 120 }}
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-500 scrollbar-hide overflow-hidden"
+                style={{ minHeight: 40, maxHeight: 120, height: 40 }}
               />
               {inputMessage && (
                 <div className="absolute right-2 bottom-1 text-xs text-gray-500">
@@ -1012,7 +1089,8 @@ export default function ContextualAIChatUI() {
             <button
               onClick={sendMessage}
               disabled={!inputMessage.trim()}
-              className="flex-shrink-0 p-2.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl text-white disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              className="flex-shrink-0 h-10 w-10 p-0 bg-black text-white rounded-xl hover:bg-black/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center justify-center"
+              style={{ minWidth: 40, minHeight: 40 }}
             >
               <Send className="w-4 h-4" />
             </button>
@@ -1025,58 +1103,75 @@ export default function ContextualAIChatUI() {
           onClick={() => setShowSidebar(false)}
         />
         <aside
-          className={`fixed top-0 left-0 h-full w-4/5 max-w-sm bg-slate-900/95 backdrop-blur-md border-r border-white/10 z-30 transition-transform md:w-1/3 md:z-50 ${showSidebar ? 'translate-x-0' : '-translate-x-full'
+          className={`fixed top-0 left-0 h-full w-4/5 max-w-sm bg-white/95 backdrop-blur-md border-r border-gray-200 z-30 transition-transform md:w-1/3 md:z-50 ${showSidebar ? 'translate-x-0' : '-translate-x-full'
             }`}
         >
-          <div className="flex items-center justify-between p-4 border-b border-white/10">
-            <h2 className="text-lg font-semibold text-white md:text-xl">Data Sources</h2>
+          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-black md:text-xl">Data Sources</h2>
             <button onClick={() => setShowSidebar(false)}>
-              <X className="w-5 h-5 text-gray-300" />
+              <X className="w-5 h-5 text-gray-600" />
             </button>
           </div>
 
           <div className="flex flex-col h-[calc(100%-60px)] p-4">
             <button
               onClick={() => {checkAuth() && setShowUploadModal(true); setShowSidebar(false);}}
-              className="w-full flex items-center gap-3 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-400/20 rounded-lg hover:from-blue-500/20 hover:to-purple-500/20 transition-all text-left mb-4 md:gap-4"
+              disabled={isUploadingAny}
+              className="w-full flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg hover:from-blue-100 hover:to-purple-100 transition-all text-left mb-4 md:gap-4 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Plus className="w-5 h-5 text-blue-400 md:w-6 md:h-6" />
+              {isUploadingAny ? (
+                <Loader2 className="w-5 h-5 text-blue-500 animate-spin md:w-6 md:h-6" />
+              ) : (
+                <Plus className="w-5 h-5 text-blue-500 md:w-6 md:h-6" />
+              )}
               <div>
-                <span className="text-white block font-medium md:text-lg">Add Content</span>
-                <span className="text-xs text-gray-400">Files, text, URLs, YouTube</span>
+                <span className="text-black block font-medium md:text-lg">
+                  {isUploadingAny ? 'Adding...' : 'Add Content'}
+                </span>
+                <span className="text-xs text-gray-600">
+                  {isUploadingAny 
+                    ? 'Processing content...' 
+                    : `Files, text, URLs, YouTube (${successfulFiles.length}/${MAX_DOCUMENTS})`
+                  }
+                </span>
               </div>
             </button>
 
             <div className="flex-1 space-y-2 overflow-y-auto">
               {uploadedFiles.length > 0 && (
                 <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-gray-300 uppercase tracking-wide hidden md:block">Uploaded Sources ({uploadedFiles.length})</h3>
+                  <h3 className="text-sm font-medium text-gray-700 uppercase tracking-wide hidden md:block">
+                    Uploaded Sources ({successfulFiles.length}/{MAX_DOCUMENTS})
+                  </h3>
                   {uploadedFiles.map((f) => (
-                    <div key={f.id} className="flex items-center gap-2 p-2 bg-black/30 rounded-lg md:gap-3 md:p-3">
+                    <div key={f.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg md:gap-3 md:p-3">
                       {fileIcon(f.type)}
                       <div className="flex-1 min-w-0">
-                        <span className="block truncate text-sm text-gray-200">{f.name}</span>
-                        {f.size && <span className="text-xs text-gray-400">{formatBytes(f.size)}</span>}
+                        <span className="block truncate text-sm text-gray-800">{f.name}</span>
+                        {f.size && <span className="text-xs text-gray-600">{formatBytes(f.size)}</span>}
                         {f.uploadedAt && (
                           <span className="text-xs text-gray-500 hidden md:block">
                             {f.uploadedAt.toLocaleDateString()}
                           </span>
                         )}
+                        {f.error && (
+                          <span className="text-xs text-red-600">{f.error}</span>
+                        )}
                       </div>
                       <div className="flex items-center gap-1">
-                        {f.status === 'uploading' && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+                        {f.status === 'uploading' && <Loader2 className="w-4 h-4 animate-spin text-gray-600" />}
                         {f.status === 'success' && <CheckCircle className="w-4 h-4 text-green-400" />}
                         {f.status === 'error' && <AlertCircle className="w-4 h-4 text-red-400" />}
                         {f.preview && f.status === 'success' && (
                           <button
                             onClick={() => setShowPreview(f)}
-                            className="text-gray-400 hover:text-white"
+                            className="text-gray-600 hover:text-black"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
                         )}
                         <button onClick={() => removeFile(f.id)}>
-                          <Trash2 className="w-4 h-4 text-gray-400 hover:text-white" />
+                          <Trash2 className="w-4 h-4 text-gray-600 hover:text-black" />
                         </button>
                       </div>
                     </div>
@@ -1094,6 +1189,8 @@ export default function ContextualAIChatUI() {
           onClose={() => setShowUploadModal(false)}
           onSelectOption={handleUploadOption}
           checkAuth={checkAuth}
+          isUploadingAny={isUploadingAny}
+          canUploadMore={canUploadMore}
         />
       )}
 
@@ -1103,19 +1200,20 @@ export default function ContextualAIChatUI() {
             autoFocus
             value={textContent}
             onChange={(e) => setTextContent(e.target.value)}
-            className="w-full h-32 p-2 bg-black/30 border border-white/10 rounded-md text-white placeholder-gray-400"
+            className="w-full h-32 p-2 bg-gray-50 border border-gray-200 rounded-md text-black placeholder-gray-500"
             placeholder="Paste or type text…"
           />
           <div className="flex justify-end gap-2 mt-2">
-            <button onClick={() => setShowTextModal(false)} className="px-3 py-1 text-sm text-gray-400 hover:text-gray-200">
+            <button onClick={() => setShowTextModal(false)} className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800">
               Cancel
             </button>
             <button
               onClick={handleTextUpload}
-              disabled={!textContent.trim()}
-              className="px-3 py-1 text-sm bg-blue-500 text-white rounded-md disabled:opacity-50"
+              disabled={!textContent.trim() || isUploadingText}
+              className="px-3 py-1 text-sm bg-blue-500 text-white rounded-md disabled:opacity-50 flex items-center gap-2"
             >
-              Add
+              {isUploadingText && <Loader2 className="w-3 h-3 animate-spin" />}
+              {isUploadingText ? 'Adding...' : 'Add'}
             </button>
           </div>
         </Modal>
@@ -1128,23 +1226,24 @@ export default function ContextualAIChatUI() {
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && isValidUrl(url) && handleUrlUpload()}
+            onKeyDown={(e) => e.key === 'Enter' && isValidUrl(url) && !isUploadingUrl && handleUrlUpload()}
             placeholder="https://example.com or YouTube URL"
-            className="w-full px-2 py-1 bg-black/30 border border-white/10 rounded-md text-white placeholder-gray-400"
+            className="w-full px-2 py-1 bg-gray-50 border border-gray-200 rounded-md text-black placeholder-gray-500"
           />
-          <div className="text-xs text-gray-400 mt-1">
+          <div className="text-xs text-gray-600 mt-1">
             Supports websites and YouTube videos
           </div>
           <div className="flex justify-end gap-2 mt-2">
-            <button onClick={() => setShowUrlModal(false)} className="px-3 py-1 text-sm text-gray-400 hover:text-gray-200">
+            <button onClick={() => setShowUrlModal(false)} className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800">
               Cancel
             </button>
             <button
               onClick={handleUrlUpload}
-              disabled={!isValidUrl(url)}
-              className="px-3 py-1 text-sm bg-blue-500 text-white rounded-md disabled:opacity-50"
+              disabled={!isValidUrl(url) || isUploadingUrl}
+              className="px-3 py-1 text-sm bg-blue-500 text-white rounded-md disabled:opacity-50 flex items-center gap-2"
             >
-              Add
+              {isUploadingUrl && <Loader2 className="w-3 h-3 animate-spin" />}
+              {isUploadingUrl ? 'Adding...' : 'Add'}
             </button>
           </div>
         </Modal>
